@@ -1,0 +1,9 @@
+test/
+coverage/
+.DS_Store
+.env
+*.log
+.git/
+.github/
+.claude/
+IMPLEMENTATION_PLAN.md

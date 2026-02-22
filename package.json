@@ -1,0 +1,37 @@
+{
+  "name": "claude-burn-rate",
+  "version": "1.0.0",
+  "description": "Privacy-first CLI dashboard for Claude Code usage analytics",
+  "main": "bin/cli.js",
+  "bin": {
+    "claude-burn-rate": "bin/cli.js"
+  },
+  "scripts": {
+    "start": "node bin/cli.js",
+    "test": "node --test test/"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "analytics",
+    "usage",
+    "cost",
+    "dashboard"
+  ],
+  "author": "arunkumargit",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/arunkumargit/claude-burn-rate.git"
+  },
+  "bugs": {
+    "url": "https://github.com/arunkumargit/claude-burn-rate/issues"
+  },
+  "homepage": "https://github.com/arunkumargit/claude-burn-rate#readme",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "open": "^10.1.0"
+  }
+}

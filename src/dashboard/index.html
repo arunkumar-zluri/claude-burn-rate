@@ -1,0 +1,1828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>claude-burn-rate — Usage Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #0a0a1a;
+  --surface: rgba(255, 255, 255, 0.04);
+  --surface2: rgba(255, 255, 255, 0.07);
+  --surface3: rgba(255, 255, 255, 0.10);
+  --border: rgba(255, 255, 255, 0.08);
+  --border-glow: rgba(139, 92, 246, 0.3);
+  --text: #f0f0ff;
+  --text-dim: #9ca3af;
+  --text-dimmer: #6b7280;
+  --accent: #a78bfa;
+  --accent2: #34d399;
+  --accent3: #f472b6;
+  --accent4: #fb923c;
+  --accent5: #38bdf8;
+  --danger: #f87171;
+  --warning: #fbbf24;
+  --success: #34d399;
+  --card-radius: 16px;
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+  --gradient-1: linear-gradient(135deg, #a78bfa, #f472b6);
+  --gradient-2: linear-gradient(135deg, #34d399, #38bdf8);
+  --gradient-3: linear-gradient(135deg, #fb923c, #f472b6);
+  --gradient-4: linear-gradient(135deg, #38bdf8, #a78bfa);
+  --glass: rgba(255, 255, 255, 0.03);
+  --glass-border: rgba(255, 255, 255, 0.06);
+}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap');
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  min-height: 100vh;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(120, 80, 255, 0.15), transparent),
+    radial-gradient(ellipse 60% 40% at 80% 100%, rgba(244, 114, 182, 0.08), transparent),
+    radial-gradient(ellipse 50% 30% at 10% 80%, rgba(52, 211, 153, 0.06), transparent);
+  background-attachment: fixed;
+}
+.container { max-width: 1400px; margin: 0 auto; padding: 24px; }
+
+/* Header */
+header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+header::after {
+  content: ''; position: absolute; bottom: -1px; left: 0; width: 100%; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(167, 139, 250, 0.5), rgba(244, 114, 182, 0.5), transparent);
+}
+header h1 { font-size: 26px; font-weight: 800; display: flex; align-items: center; gap: 12px; letter-spacing: -0.5px; }
+header h1 .logo {
+  width: 36px; height: 36px;
+  background: var(--gradient-1);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; font-weight: 800;
+  box-shadow: 0 4px 15px rgba(167, 139, 250, 0.3);
+  animation: logoPulse 3s ease-in-out infinite;
+}
+@keyframes logoPulse {
+  0%, 100% { box-shadow: 0 4px 15px rgba(167, 139, 250, 0.3); transform: scale(1); }
+  50% { box-shadow: 0 4px 25px rgba(167, 139, 250, 0.5); transform: scale(1.05); }
+}
+.header-meta { color: var(--text-dim); font-size: 13px; text-align: right; }
+
+/* Filter Toggle */
+.filter-toggle-row {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+}
+.filter-toggle-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: 8px;
+  background: var(--glass); border: 1px solid var(--glass-border);
+  color: var(--text-dim); font-size: 13px; font-weight: 600;
+  font-family: var(--font); cursor: pointer; transition: all 0.2s;
+}
+.filter-toggle-btn:hover { color: var(--text); border-color: rgba(167, 139, 250, 0.3); }
+.filter-toggle-btn.open { color: var(--accent); border-color: rgba(167, 139, 250, 0.3); }
+
+/* Filter Bar */
+.filter-bar {
+  display: none; align-items: center; gap: 12px; padding: 14px 18px;
+  background: var(--glass);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  transition: border-color 0.3s;
+  animation: fadeIn 0.2s ease;
+}
+.filter-bar.open { display: flex; }
+.filter-bar:hover { border-color: rgba(167, 139, 250, 0.2); }
+.filter-group { display: flex; align-items: center; gap: 6px; }
+.filter-group label { font-size: 11px; color: var(--text-dim); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+.filter-group input[type="date"], .filter-group select {
+  background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 7px 12px;
+  border-radius: 8px; font-size: 13px; font-family: var(--font); transition: all 0.2s;
+}
+.filter-group input[type="date"]:focus, .filter-group select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.15); }
+.filter-group select { min-width: 180px; max-width: 300px; }
+.filter-btn {
+  padding: 7px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer;
+  border: 1px solid var(--border); font-family: var(--font); transition: all 0.2s;
+}
+.filter-btn.primary {
+  background: var(--gradient-1); color: #fff; border: none;
+  box-shadow: 0 2px 10px rgba(167, 139, 250, 0.25);
+}
+.filter-btn.primary:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(167, 139, 250, 0.4); }
+.filter-btn.secondary { background: var(--surface2); color: var(--text-dim); }
+.filter-btn.secondary:hover { color: var(--text); background: var(--surface3); transform: translateY(-1px); }
+.filter-active-tag {
+  font-size: 11px; background: var(--gradient-1); color: #fff; padding: 3px 10px; border-radius: 12px;
+  font-weight: 700; letter-spacing: 0.5px;
+}
+
+/* Tabs */
+.tabs {
+  display: flex; gap: 4px; margin-bottom: 24px;
+  background: var(--glass);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px; padding: 5px; overflow-x: auto;
+}
+.tab {
+  padding: 9px 20px; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 600;
+  color: var(--text-dim); border: none; background: none; white-space: nowrap;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); font-family: var(--font);
+  position: relative; letter-spacing: 0.2px;
+}
+.tab:hover { color: var(--text); background: var(--surface2); }
+.tab.active {
+  color: #fff;
+  background: var(--gradient-1);
+  box-shadow: 0 2px 12px rgba(167, 139, 250, 0.3);
+}
+
+/* Cards */
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.card {
+  background: var(--glass);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--card-radius); padding: 22px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative; overflow: hidden;
+}
+.card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: var(--gradient-1); opacity: 0; transition: opacity 0.3s;
+}
+.card:hover { transform: translateY(-3px); border-color: var(--border-glow); }
+.card:hover::before { opacity: 1; }
+.card:nth-child(1)::before { background: var(--gradient-1); }
+.card:nth-child(2)::before { background: var(--gradient-2); }
+.card:nth-child(3)::before { background: linear-gradient(135deg, #f472b6, #a78bfa); }
+.card:nth-child(4)::before { background: var(--gradient-3); }
+.card-label { font-size: 11px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+.card-value { font-size: 30px; font-weight: 800; font-family: var(--mono); letter-spacing: -1px; }
+.card-sub { font-size: 12px; color: var(--text-dim); margin-top: 6px; }
+.card-value.cost { background: var(--gradient-1); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.card-value.sessions { background: var(--gradient-2); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.card-value.messages { background: linear-gradient(135deg, #f472b6, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.card-value.tools { background: var(--gradient-3); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+/* Charts */
+.chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+.chart-card {
+  background: var(--glass);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--card-radius); padding: 22px;
+  transition: border-color 0.3s;
+}
+.chart-card:hover { border-color: rgba(167, 139, 250, 0.15); }
+.chart-card h3 {
+  font-size: 14px; font-weight: 700; margin-bottom: 16px; color: var(--text);
+}
+.chart-card.full { grid-column: 1 / -1; }
+.chart-container { position: relative; height: 280px; }
+
+/* Tables */
+.table-card {
+  background: var(--glass);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--card-radius); padding: 22px; overflow-x: auto;
+}
+.table-card h3 {
+  font-size: 14px; font-weight: 700; margin-bottom: 16px; color: var(--text);
+}
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th {
+  text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border);
+  color: var(--text-dim); font-weight: 600; font-size: 11px;
+  text-transform: uppercase; letter-spacing: 1px; cursor: pointer; user-select: none;
+}
+th:hover { color: var(--accent); }
+td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--surface2); }
+tr { transition: background 0.15s; }
+.mono { font-family: var(--mono); }
+.text-right { text-align: right; }
+.text-dim { color: var(--text-dim); }
+.text-accent { color: var(--accent); }
+
+/* Token bar */
+.token-bar { display: flex; height: 28px; border-radius: 14px; overflow: hidden; margin-top: 12px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2); }
+.token-bar > div { transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+.token-bar .input { background: linear-gradient(135deg, #a78bfa, #818cf8); }
+.token-bar .output { background: linear-gradient(135deg, #34d399, #2dd4bf); }
+.token-bar .cache-read { background: linear-gradient(135deg, #f472b6, #e879f9); }
+.token-bar .cache-write { background: linear-gradient(135deg, #fb923c, #f59e0b); }
+.token-legend { display: flex; gap: 16px; margin-top: 10px; font-size: 12px; color: var(--text-dim); flex-wrap: wrap; }
+.token-legend span::before { content: ''; display: inline-block; width: 10px; height: 10px; border-radius: 5px; margin-right: 6px; vertical-align: middle; }
+.token-legend .l-input::before { background: var(--accent); }
+.token-legend .l-output::before { background: var(--accent2); }
+.token-legend .l-cache-read::before { background: var(--accent3); }
+.token-legend .l-cache-write::before { background: var(--accent4); }
+
+/* Insights */
+.insight-card {
+  background: var(--glass);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--card-radius);
+  margin-bottom: 12px;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.insight-card:hover { border-color: rgba(167, 139, 250, 0.2); transform: translateX(4px); }
+.insight-header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 16px 20px; cursor: pointer; user-select: none;
+}
+.insight-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; flex-shrink: 0;
+}
+.insight-icon.warning { background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(251, 146, 60, 0.2)); }
+.insight-icon.info { background: linear-gradient(135deg, rgba(167, 139, 250, 0.2), rgba(56, 189, 248, 0.2)); }
+.insight-title { flex: 1; font-size: 14px; font-weight: 700; }
+.insight-chevron { color: var(--text-dim); font-size: 18px; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+.insight-card.open .insight-chevron { transform: rotate(180deg); }
+.insight-body {
+  max-height: 0; overflow: hidden;
+  transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.insight-card.open .insight-body { max-height: 500px; }
+.insight-body-inner { padding: 0 20px 16px 68px; }
+.insight-help-btn {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: rgba(167, 139, 250, 0.12); color: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 800; cursor: pointer; flex-shrink: 0;
+  font-family: var(--mono); transition: all 0.2s;
+  border: 1px solid rgba(167, 139, 250, 0.2);
+}
+.insight-help-btn:hover {
+  background: rgba(167, 139, 250, 0.25); transform: scale(1.1);
+  border-color: rgba(167, 139, 250, 0.4);
+}
+.insight-help {
+  max-height: 0; overflow: hidden;
+  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.insight-help.open { max-height: 200px; }
+.insight-help-inner {
+  padding: 0 20px 14px 68px;
+  font-size: 12px; line-height: 1.7; color: var(--accent);
+  background: linear-gradient(135deg, rgba(167, 139, 250, 0.06), rgba(56, 189, 248, 0.04));
+  margin: 0 16px 8px 16px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px dashed rgba(167, 139, 250, 0.2);
+}
+.insight-desc { font-size: 13px; color: var(--text-dim); line-height: 1.7; margin-bottom: 10px; }
+.insight-detail {
+  font-size: 12px; color: var(--text-dimmer);
+  background: var(--surface2); padding: 12px 16px;
+  border-radius: 10px; white-space: pre-wrap;
+  font-family: var(--mono); line-height: 1.7;
+  border: 1px solid var(--border);
+}
+
+/* Top Insights Strip */
+.top-insights {
+  display: flex; gap: 12px; margin-bottom: 24px; overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+.top-insights::-webkit-scrollbar { display: none; }
+.top-insight {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 18px;
+  background: var(--glass);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  min-width: 0;
+}
+.top-insight:hover {
+  border-color: rgba(167, 139, 250, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(167, 139, 250, 0.1);
+}
+.top-insight.severity-warning { border-left: 3px solid var(--warning); }
+.top-insight.severity-info { border-left: 3px solid var(--accent); }
+.top-insight-icon {
+  width: 28px; height: 28px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; flex-shrink: 0;
+}
+.top-insight.severity-warning .top-insight-icon {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(251, 146, 60, 0.2));
+}
+.top-insight.severity-info .top-insight-icon {
+  background: linear-gradient(135deg, rgba(167, 139, 250, 0.2), rgba(56, 189, 248, 0.2));
+}
+.top-insight-text {
+  display: flex; flex-direction: column; gap: 2px; min-width: 0;
+}
+.top-insight-title {
+  font-size: 13px; font-weight: 700; color: var(--text);
+  overflow: hidden; text-overflow: ellipsis;
+}
+.top-insight-sub {
+  font-size: 11px; color: var(--text-dim); font-weight: 500;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.top-insights-label {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1px; color: var(--text-dimmer); margin-bottom: 10px;
+  display: flex; align-items: center; gap: 8px;
+}
+.top-insights-label::after {
+  content: ''; flex: 1; height: 1px;
+  background: linear-gradient(90deg, var(--border), transparent);
+}
+
+/* Expensive prompts */
+.prompt-card {
+  background: var(--glass);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--card-radius);
+  padding: 18px 22px; margin-bottom: 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.prompt-card:hover { border-color: rgba(167, 139, 250, 0.2); transform: translateY(-2px); }
+.prompt-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.prompt-cost {
+  font-family: var(--mono); font-weight: 800; font-size: 16px; white-space: nowrap; margin-left: 12px;
+  background: var(--gradient-1); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.prompt-text {
+  font-size: 13px; color: var(--text); line-height: 1.5; margin-bottom: 10px;
+  background: var(--surface2); padding: 12px 16px; border-radius: 10px;
+  white-space: pre-wrap; word-break: break-word; max-height: 120px;
+  overflow: hidden; position: relative; border: 1px solid var(--border);
+  cursor: pointer;
+}
+.prompt-text.expanded { max-height: none; }
+.prompt-text::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 30px; background: linear-gradient(transparent, var(--surface2)); pointer-events: none; }
+.prompt-text.expanded::after { display: none; }
+.prompt-meta { display: flex; gap: 16px; font-size: 12px; color: var(--text-dim); flex-wrap: wrap; }
+.prompt-meta span { display: flex; align-items: center; gap: 4px; }
+.prompt-reasons { margin-top: 10px; }
+.prompt-reason {
+  font-size: 12px; color: var(--warning); padding: 5px 0;
+  display: flex; align-items: flex-start; gap: 8px;
+}
+.prompt-reason::before {
+  content: '!'; font-weight: 800;
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.25), rgba(251, 146, 60, 0.25));
+  color: var(--warning); width: 18px; height: 18px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; flex-shrink: 0; margin-top: 1px;
+}
+
+/* Loading */
+.loading { display: flex; align-items: center; justify-content: center; height: 200px; color: var(--text-dim); font-weight: 500; }
+.spinner {
+  width: 22px; height: 22px;
+  border: 2.5px solid var(--border);
+  border-top-color: var(--accent);
+  border-right-color: var(--accent3);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-right: 12px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Tab content */
+.tab-content { display: none; animation: fadeIn 0.3s ease; }
+.tab-content.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .chart-grid { grid-template-columns: 1fr; }
+  .cards { grid-template-columns: repeat(2, 1fr); }
+  .container { padding: 16px; }
+  .filter-bar { gap: 8px; }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(167, 139, 250, 0.2); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(167, 139, 250, 0.4); }
+
+/* Tooltips */
+.has-tooltip {
+  position: relative; cursor: help;
+}
+.has-tooltip .tip-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: rgba(167, 139, 250, 0.12); color: var(--accent);
+  -webkit-text-fill-color: var(--accent);
+  font-size: 10px; font-weight: 800; font-family: var(--mono);
+  margin-left: 6px; vertical-align: middle;
+  border: 1px solid rgba(167, 139, 250, 0.2);
+  cursor: help; flex-shrink: 0;
+}
+.has-tooltip .tip-text {
+  display: none;
+}
+
+/* Selection */
+::selection { background: rgba(167, 139, 250, 0.3); color: #fff; }
+
+/* Gamification Section */
+.gamification-row {
+  display: grid;
+  grid-template-columns: 200px 180px 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+  align-items: start;
+}
+@media (max-width: 768px) {
+  .gamification-row { grid-template-columns: 1fr; }
+}
+
+/* Score Ring */
+.score-card {
+  background: var(--glass);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--card-radius);
+  padding: 22px;
+  display: flex; flex-direction: column; align-items: center;
+  transition: border-color 0.3s;
+}
+.score-card:hover { border-color: rgba(167, 139, 250, 0.2); }
+.score-ring-wrap {
+  position: relative; width: 120px; height: 120px; margin-bottom: 12px;
+}
+.score-ring-wrap svg { transform: rotate(-90deg); }
+.score-ring-bg { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 8; }
+.score-ring-fg { fill: none; stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset 1s ease, stroke 0.5s; }
+.score-ring-value {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 28px; font-weight: 800;
+}
+.score-label {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1px; color: var(--text-dim); margin-bottom: 10px;
+}
+.score-factors { width: 100%; }
+.score-factor {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 11px; color: var(--text-dim); padding: 3px 0;
+}
+.score-factor-bar {
+  width: 40px; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.06); overflow: hidden;
+}
+.score-factor-fill { height: 100%; border-radius: 2px; transition: width 0.8s ease; }
+.score-improve-tip {
+  margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border);
+  font-size: 10px; color: var(--text-dim); line-height: 1.5; text-align: center;
+}
+.score-improve-tip strong { color: var(--warning); }
+
+/* Streak */
+.streak-card {
+  background: var(--glass);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--card-radius);
+  padding: 22px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  transition: border-color 0.3s;
+}
+.streak-card:hover { border-color: rgba(167, 139, 250, 0.2); }
+.streak-flame {
+  font-size: 36px; line-height: 1; margin-bottom: 6px;
+  filter: drop-shadow(0 0 8px rgba(251, 146, 60, 0.5));
+}
+.streak-count {
+  font-family: var(--mono); font-size: 32px; font-weight: 800;
+  background: var(--gradient-3); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.streak-label {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1px; color: var(--text-dim); margin-top: 2px;
+}
+.streak-best {
+  font-size: 12px; color: var(--text-dimmer); margin-top: 10px;
+  padding-top: 10px; border-top: 1px solid var(--border); width: 100%; text-align: center;
+}
+.streak-best strong { color: var(--accent); font-family: var(--mono); }
+
+/* Achievement Grid */
+.achievements-card {
+  background: var(--glass);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--card-radius);
+  padding: 22px;
+  transition: border-color 0.3s;
+  overflow: visible;
+}
+.achievements-card:hover { border-color: rgba(167, 139, 250, 0.2); }
+.achievements-label {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1px; color: var(--text-dim); margin-bottom: 12px;
+  display: flex; align-items: center; gap: 8px;
+}
+.achievements-label span { color: var(--accent); font-family: var(--mono); }
+.achievements-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+  overflow: visible;
+}
+@media (max-width: 768px) {
+  .achievements-grid { grid-template-columns: repeat(3, 1fr); }
+}
+.achievement {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 10px 6px; border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid transparent;
+  transition: all 0.3s; position: relative;
+  cursor: default;
+}
+.achievement.unlocked {
+  border-color: rgba(167, 139, 250, 0.25);
+  background: rgba(167, 139, 250, 0.06);
+  box-shadow: 0 0 12px rgba(167, 139, 250, 0.08);
+}
+.achievement.locked { opacity: 0.35; }
+.achievement:hover { transform: translateY(-2px); }
+.achievement-icon {
+  width: 36px; height: 36px; border-radius: 10px; margin-bottom: 6px;
+  display: flex; align-items: center; justify-content: center; font-size: 18px;
+  background: var(--surface2);
+}
+.achievement.unlocked .achievement-icon {
+  background: linear-gradient(135deg, rgba(167, 139, 250, 0.2), rgba(244, 114, 182, 0.2));
+}
+.achievement-title {
+  font-size: 10px; font-weight: 700; color: var(--text);
+  text-align: center; line-height: 1.3;
+}
+.achievement.locked .achievement-title { color: var(--text-dimmer); }
+
+/* Global floating tooltip for achievements */
+#ach-tooltip {
+  display: none; position: fixed;
+  background: #1a1a2e; border: 1px solid rgba(167, 139, 250, 0.3);
+  border-radius: 10px; padding: 10px 14px; font-size: 12px; color: var(--text-dim);
+  text-align: center; max-width: 240px; width: max-content;
+  z-index: 9999; box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+  pointer-events: none; line-height: 1.5;
+  font-family: var(--font);
+}
+#ach-tooltip::after {
+  content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  border: 6px solid transparent; border-top-color: #1a1a2e;
+}
+#ach-tooltip .tip-progress {
+  display: block; margin-top: 5px; color: var(--accent); font-weight: 600;
+  font-family: var(--mono); font-size: 10px;
+}
+
+/* Security Tab */
+.security-section { margin-bottom: 24px; }
+.security-section h3 {
+  font-size: 14px; font-weight: 700; margin-bottom: 12px; color: var(--text);
+  display: flex; align-items: center; gap: 8px;
+}
+.sensitive-flag {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10px; font-weight: 700; color: var(--danger);
+  background: rgba(248, 113, 113, 0.12); padding: 2px 8px; border-radius: 6px;
+}
+.bash-category {
+  background: var(--glass);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--card-radius);
+  margin-bottom: 12px; overflow: hidden;
+  transition: border-color 0.3s;
+}
+.bash-category:hover { border-color: rgba(167, 139, 250, 0.2); }
+.bash-category-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px; cursor: pointer; user-select: none;
+}
+.bash-category-title {
+  font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px;
+}
+.bash-category-count {
+  font-family: var(--mono); font-size: 12px; font-weight: 600;
+  background: var(--surface2); padding: 2px 10px; border-radius: 8px; color: var(--text-dim);
+}
+.bash-category-chevron {
+  color: var(--text-dim); font-size: 18px;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.bash-category.open .bash-category-chevron { transform: rotate(180deg); }
+.bash-category-body {
+  max-height: 0; overflow: hidden;
+  transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.bash-category.open .bash-category-body { max-height: 2000px; }
+.bash-cmd {
+  padding: 8px 20px; font-family: var(--mono); font-size: 12px;
+  color: var(--text-dim); border-top: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+}
+.bash-cmd:hover { background: var(--surface2); }
+.bash-cmd-text { word-break: break-all; flex: 1; }
+.bash-cmd-date { font-size: 10px; color: var(--text-dimmer); white-space: nowrap; flex-shrink: 0; }
+.bash-category.cat-destructive { border-left: 3px solid var(--danger); }
+.bash-category.cat-permissions { border-left: 3px solid var(--warning); }
+.bash-category.cat-network { border-left: 3px solid var(--accent4); }
+.bash-category.cat-packageManagers { border-left: 3px solid var(--accent5); }
+.bash-category.cat-safe { border-left: 3px solid var(--accent2); }
+.dir-scope-group { margin-bottom: 16px; }
+.dir-scope-label {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1px; color: var(--text-dim); margin-bottom: 8px;
+  display: flex; align-items: center; gap: 8px;
+}
+.dir-scope-label.outside { color: var(--warning); }
+.dir-scope-label::after {
+  content: ''; flex: 1; height: 1px;
+  background: linear-gradient(90deg, var(--border), transparent);
+}
+.dir-entry {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 12px; font-size: 12px; border-radius: 8px;
+  transition: background 0.15s;
+}
+.dir-entry:hover { background: var(--surface2); }
+.dir-entry .mono { color: var(--text); }
+.dir-entry-count {
+  font-family: var(--mono); font-size: 11px; color: var(--text-dim);
+  background: var(--surface2); padding: 2px 8px; border-radius: 6px;
+}
+tr.sensitive-row td { background: rgba(248, 113, 113, 0.04); }
+tr.sensitive-row:hover td { background: rgba(248, 113, 113, 0.08); }
+</style>
+</head>
+<body>
+<div id="ach-tooltip"></div>
+<div class="container">
+  <header>
+    <h1><div class="logo">$</div> claude-burn-rate</h1>
+    <div class="header-meta">
+      <div id="date-range"></div>
+      <div id="last-updated"></div>
+    </div>
+  </header>
+
+  <!-- Filter Toggle -->
+  <div class="filter-toggle-row">
+    <button class="filter-toggle-btn" id="filter-toggle">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M1 3h14M4 8h8M6 13h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <span>Filters</span>
+    </button>
+    <span class="filter-active-tag" id="filter-tag" style="display:none">Filtered</span>
+  </div>
+
+  <!-- Filter Bar (hidden by default) -->
+  <div class="filter-bar" id="filter-bar">
+    <div class="filter-group">
+      <label>From</label>
+      <input type="date" id="filter-from">
+    </div>
+    <div class="filter-group">
+      <label>To</label>
+      <input type="date" id="filter-to">
+    </div>
+    <div class="filter-group">
+      <label>Project</label>
+      <select id="filter-project">
+        <option value="">All Projects</option>
+      </select>
+    </div>
+    <button class="filter-btn primary" id="filter-apply">Apply</button>
+    <button class="filter-btn secondary" id="filter-reset">Reset</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="overview">Overview</button>
+    <button class="tab" data-tab="sessions">Sessions</button>
+    <button class="tab" data-tab="projects">Projects</button>
+    <button class="tab" data-tab="patterns">Patterns</button>
+    <button class="tab" data-tab="expensive">Expensive Prompts</button>
+    <button class="tab" data-tab="insights">Personalized Insights</button>
+    <button class="tab" data-tab="contributions">Contributions</button>
+    <button class="tab" data-tab="security">Security</button>
+  </div>
+
+  <!-- Overview Tab -->
+  <div class="tab-content active" id="tab-overview">
+    <div class="loading" id="overview-loading"><div class="spinner"></div>Loading analytics...</div>
+    <div id="overview-content" style="display:none">
+      <div class="cards" id="overview-cards"></div>
+      <div id="top-insights-container"></div>
+      <div class="chart-grid">
+        <div class="chart-card full">
+          <h3 class="has-tooltip">Daily Activity <span class="tip-icon">?</span>
+            <span class="tip-text">Messages and tool calls per day (bars, left axis) with sessions overlaid as a line (right axis). Spikes indicate heavy usage days. Tool calls include file reads, writes, searches, and bash commands.</span>
+          </h3>
+          <div class="chart-container"><canvas id="chart-daily"></canvas></div>
+        </div>
+        <div class="chart-card full">
+          <h3 class="has-tooltip">Tokens Per Day <span class="tip-icon">?</span>
+            <span class="tip-text">Total output tokens generated each day, stacked by model. Higher bars mean more Claude output. This correlates with cost — output tokens are the most expensive per token ($75/M for Opus, $15/M for Sonnet).</span>
+          </h3>
+          <div class="chart-container"><canvas id="chart-tokens-daily"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3 class="has-tooltip">Cost by Model <span class="tip-icon">?</span>
+            <span class="tip-text">Shows how your total estimated cost is split across Claude models. Opus is the most capable but most expensive (~5x Sonnet). Use Sonnet for simpler tasks to save money.</span>
+          </h3>
+          <div class="chart-container"><canvas id="chart-model-cost"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3 class="has-tooltip">Token Composition <span class="tip-icon">?</span>
+            <span class="tip-text">Breaks down all tokens into 4 categories:<br><br><strong>Input</strong> — your prompts and context sent directly (uncached)<br><strong>Output</strong> — Claude's responses<br><strong>Cache Read</strong> — reused context from a previous turn (10x cheaper than input)<br><strong>Cache Write</strong> — context processed and cached for the first time (most expensive per token)</span>
+          </h3>
+          <div class="token-bar" id="token-bar"></div>
+          <div class="token-legend">
+            <span class="l-input">Input</span>
+            <span class="l-output">Output</span>
+            <span class="l-cache-read">Cache Read</span>
+            <span class="l-cache-write">Cache Write</span>
+          </div>
+          <div style="margin-top:16px"><canvas id="chart-tokens"></canvas></div>
+        </div>
+      </div>
+      <div class="chart-grid">
+        <div class="chart-card full">
+          <h3 class="has-tooltip">Model Breakdown <span class="tip-icon">?</span>
+            <span class="tip-text">Cost per model split by token category. Input = uncached prompts. Output = Claude's responses. Cache Read = reused context (cheap). Cache Write = first-time context processing (expensive). Cache Write is often the largest cost because every new session caches your full project context.</span>
+          </h3>
+          <div class="table-card" style="border:none; padding:0;">
+            <table id="model-table">
+              <thead><tr><th>Model</th><th class="text-right">Input Cost</th><th class="text-right">Output Cost</th><th class="text-right">Cache Read</th><th class="text-right">Cache Write</th><th class="text-right">Total Cost</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sessions Tab -->
+  <div class="tab-content" id="tab-sessions">
+    <div class="loading" id="sessions-loading"><div class="spinner"></div>Loading sessions...</div>
+    <div id="sessions-content" style="display:none">
+      <div class="table-card">
+        <h3>All Sessions <span class="text-dim" id="session-count"></span></h3>
+        <table id="sessions-table">
+          <thead><tr><th data-sort="date">Date</th><th data-sort="project">Project</th><th data-sort="summary">Summary</th><th data-sort="messages" class="text-right">Messages</th><th data-sort="cost" class="text-right">Est. Cost</th><th data-sort="duration" class="text-right">Duration</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Projects Tab -->
+  <div class="tab-content" id="tab-projects">
+    <div class="loading" id="projects-loading"><div class="spinner"></div>Loading projects...</div>
+    <div id="projects-content" style="display:none">
+      <div class="chart-grid">
+        <div class="chart-card full"><h3>Cost by Project</h3><div class="chart-container"><canvas id="chart-project-cost"></canvas></div></div>
+      </div>
+      <div class="table-card">
+        <h3>Project Leaderboard</h3>
+        <table id="projects-table">
+          <thead><tr><th data-sort="project">Project</th><th data-sort="sessions" class="text-right">Sessions</th><th data-sort="messages" class="text-right">Messages</th><th data-sort="cost" class="text-right">Est. Cost</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Patterns Tab -->
+  <div class="tab-content" id="tab-patterns">
+    <div class="loading" id="patterns-loading"><div class="spinner"></div>Loading patterns...</div>
+    <div id="patterns-content" style="display:none">
+      <div class="chart-grid">
+        <div class="chart-card full"><h3>Usage Heatmap (Hour of Day)</h3><div class="chart-container"><canvas id="chart-heatmap"></canvas></div></div>
+        <div class="chart-card"><h3>Peak Hours</h3><div class="chart-container"><canvas id="chart-peak-hours"></canvas></div></div>
+        <div class="chart-card"><h3>Weekly Comparison</h3><div class="chart-container"><canvas id="chart-weekly"></canvas></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Expensive Prompts Tab -->
+  <div class="tab-content" id="tab-expensive">
+    <div class="loading" id="expensive-loading"><div class="spinner"></div>Analyzing prompts...</div>
+    <div id="expensive-content" style="display:none"></div>
+  </div>
+
+  <!-- Insights Tab -->
+  <div class="tab-content" id="tab-insights">
+    <div class="loading" id="insights-loading"><div class="spinner"></div>Generating insights...</div>
+    <div id="insights-content" style="display:none">
+      <div id="gamification-container"></div>
+      <div id="insights-list"></div>
+    </div>
+  </div>
+
+  <!-- Contributions Tab -->
+  <div class="tab-content" id="tab-contributions">
+    <div class="loading" id="contrib-loading"><div class="spinner"></div>Loading contributions...</div>
+    <div id="contrib-content" style="display:none"></div>
+  </div>
+
+  <!-- Security Tab -->
+  <div class="tab-content" id="tab-security">
+    <div class="loading" id="security-loading"><div class="spinner"></div>Running security audit...</div>
+    <div id="security-content" style="display:none"></div>
+  </div>
+</div>
+
+<script>
+// ========== STATE ==========
+const state = {};
+const charts = {};
+let activeFilters = {};
+
+// ========== FILTERS ==========
+async function loadProjectsList() {
+  try {
+    const projects = await api('projects-list');
+    const select = document.getElementById('filter-project');
+    select.innerHTML = '<option value="">All Projects</option>';
+    for (const p of projects) {
+      const opt = document.createElement('option');
+      opt.value = p;
+      opt.textContent = p.split('/').pop() || p;
+      opt.title = p;
+      select.appendChild(opt);
+    }
+  } catch {}
+}
+
+document.getElementById('filter-toggle').addEventListener('click', () => {
+  const bar = document.getElementById('filter-bar');
+  const btn = document.getElementById('filter-toggle');
+  bar.classList.toggle('open');
+  btn.classList.toggle('open');
+});
+
+document.getElementById('filter-apply').addEventListener('click', () => {
+  const from = document.getElementById('filter-from').value;
+  const to = document.getElementById('filter-to').value;
+  const project = document.getElementById('filter-project').value;
+
+  activeFilters = {};
+  if (from) activeFilters.from = from;
+  if (to) activeFilters.to = to;
+  if (project) activeFilters.project = project;
+
+  const hasFilters = Object.keys(activeFilters).length > 0;
+  document.getElementById('filter-tag').style.display = hasFilters ? 'inline' : 'none';
+
+  // Clear all cached data
+  for (const key of Object.keys(state)) { state[key] = null; }
+
+  // Reload active tab
+  const activeTab = document.querySelector('.tab.active')?.dataset.tab;
+  if (activeTab) loadTabData(activeTab);
+});
+
+document.getElementById('filter-reset').addEventListener('click', () => {
+  document.getElementById('filter-from').value = '';
+  document.getElementById('filter-to').value = '';
+  document.getElementById('filter-project').value = '';
+  activeFilters = {};
+  document.getElementById('filter-tag').style.display = 'none';
+  document.getElementById('filter-bar').classList.remove('open');
+  document.getElementById('filter-toggle').classList.remove('open');
+  for (const key of Object.keys(state)) { state[key] = null; }
+  const activeTab = document.querySelector('.tab.active')?.dataset.tab;
+  if (activeTab) loadTabData(activeTab);
+});
+
+// ========== TABS ==========
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+    loadTabData(tab.dataset.tab);
+  });
+});
+
+// ========== API ==========
+async function api(endpoint) {
+  let url = '/api/' + endpoint;
+  const params = new URLSearchParams();
+  if (activeFilters.from) params.set('from', activeFilters.from);
+  if (activeFilters.to) params.set('to', activeFilters.to);
+  if (activeFilters.project) params.set('project', activeFilters.project);
+  const qs = params.toString();
+  if (qs) url += '?' + qs;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+}
+
+function fmt(n) { return typeof n === 'number' ? n.toLocaleString() : n; }
+function fmtCost(n) {
+  if (n >= 1) return '$' + n.toFixed(2);
+  if (n >= 0.01) return '$' + n.toFixed(3);
+  return '$' + n.toFixed(4);
+}
+function fmtTokens(n) {
+  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+  if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+  return n.toString();
+}
+function shortPath(p) { if (!p) return '\u2014'; const parts = p.split('/'); return parts[parts.length - 1] || parts[parts.length - 2] || p; }
+function truncate(s, n) { return s.length > n ? s.slice(0, n) + '...' : s; }
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function fmtDuration(ms) {
+  if (!ms || ms <= 0) return '\u2014';
+  const secs = Math.floor(ms / 1000);
+  if (secs < 60) return secs + 's';
+  const mins = Math.floor(secs / 60);
+  if (mins < 60) return mins + 'm';
+  const hrs = Math.floor(mins / 60);
+  return hrs + 'h ' + (mins % 60) + 'm';
+}
+
+// Chart defaults
+Chart.defaults.color = '#9ca3af';
+Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
+Chart.defaults.font.family = 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif';
+const MODEL_COLORS = ['#a78bfa', '#34d399', '#f472b6', '#fb923c', '#38bdf8', '#818cf8', '#2dd4bf'];
+
+async function loadTabData(tab) {
+  const loaders = {
+    overview: loadOverview,
+    sessions: loadSessions,
+    projects: loadProjects,
+    patterns: loadPatterns,
+    expensive: loadExpensive,
+    insights: loadInsights,
+    contributions: loadContributions,
+    security: loadSecurity
+  };
+  if (loaders[tab] && !state[tab]) await loaders[tab]();
+}
+
+// ========== OVERVIEW ==========
+async function loadOverview() {
+  try {
+    const data = await api('overview');
+    state.overview = data;
+    if (data.error && data.empty) {
+      document.getElementById('overview-loading').innerHTML = '<div>' + data.error + '</div>';
+      return;
+    }
+    renderOverview(data);
+  } catch (err) {
+    document.getElementById('overview-loading').innerHTML = '<div>Error: ' + err.message + '</div>';
+  }
+}
+
+function renderOverview(d) {
+  document.getElementById('overview-loading').style.display = 'none';
+  document.getElementById('overview-content').style.display = 'block';
+
+  if (d.dateRange.start) {
+    document.getElementById('date-range').textContent = d.dateRange.start + ' to ' + d.dateRange.end + ' (' + d.activeDays + ' active days)';
+  }
+  document.getElementById('last-updated').textContent = 'Updated: ' + new Date().toLocaleTimeString();
+
+  // Cards
+  document.getElementById('overview-cards').innerHTML = `
+    <div class="card"><div class="card-label has-tooltip">Total Estimated Cost <span class="tip-icon">?</span><span class="tip-text">Estimated total spend across all Claude models, calculated from token usage and Anthropic's published pricing. Includes input, output, cache read, and cache write costs.</span></div><div class="card-value cost">${fmtCost(d.totalCost)}</div><div class="card-sub">${fmtCost(d.avgCostPerDay)} avg/day</div></div>
+    <div class="card"><div class="card-label has-tooltip">Sessions <span class="tip-icon">?</span><span class="tip-text">A session is one continuous conversation with Claude Code — from when you start a task to when the conversation ends. Each time you run Claude Code in a project, it creates a new session.</span></div><div class="card-value sessions">${fmt(d.totalSessions)}</div><div class="card-sub">${d.avgSessionsPerDay} avg/day</div></div>
+    <div class="card"><div class="card-label has-tooltip">Messages <span class="tip-icon">?</span><span class="tip-text">Total number of message exchanges (your prompts + Claude's responses) across all sessions. A single session can have many messages as you go back and forth with Claude.</span></div><div class="card-value messages">${fmt(d.totalMessages)}</div><div class="card-sub">${fmt(d.avgMessagesPerDay)} avg/day</div></div>
+    <div class="card"><div class="card-label has-tooltip">Tool Calls <span class="tip-icon">?</span><span class="tip-text">Total number of tools Claude used — file reads, writes, searches, bash commands, etc. Higher tool usage typically means Claude is actively working on code rather than just chatting.</span></div><div class="card-value tools">${fmt(d.totalToolCalls)}</div><div class="card-sub">Across all sessions</div></div>
+  `;
+
+  renderDailyChart(d);
+  renderTokensDailyChart(d);
+  renderModelCostChart(d);
+  renderTokenComposition(d);
+  renderModelTable(d);
+  loadTopInsights();
+}
+
+async function loadTopInsights() {
+  try {
+    const insights = await api('insights');
+    renderTopInsights(insights);
+  } catch {}
+}
+
+function renderTopInsights(insights) {
+  const container = document.getElementById('top-insights-container');
+  if (!insights || insights.length === 0) { container.innerHTML = ''; return; }
+
+  // Pick top 5: warnings first, then info, keeping original order within each group
+  const warnings = insights.filter(i => i.severity === 'warning');
+  const infos = insights.filter(i => i.severity === 'info');
+  const top = [...warnings, ...infos].slice(0, 5);
+
+  const icons = {
+    warning: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1L1 14h14L8 1z" stroke="#fbbf24" stroke-width="1.5" fill="none"/><path d="M8 6v4M8 11.5v.5" stroke="#fbbf24" stroke-width="1.5" stroke-linecap="round"/></svg>',
+    info: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="#a78bfa" stroke-width="1.5"/><circle cx="8" cy="5.5" r="0.75" fill="#a78bfa"/><path d="M8 7.5v4" stroke="#a78bfa" stroke-width="1.5" stroke-linecap="round"/></svg>'
+  };
+
+  container.innerHTML = `
+    <div class="top-insights-label">Key Insights</div>
+    <div class="top-insights">
+      ${top.map(i => {
+        const sub = i.description.split('.')[0] + '.';
+        return `<div class="top-insight severity-${i.severity}" onclick="switchToInsights()">
+          <div class="top-insight-icon">${icons[i.severity]}</div>
+          <div class="top-insight-text">
+            <div class="top-insight-title">${esc(i.title)}</div>
+            <div class="top-insight-sub">${esc(sub.length > 80 ? sub.slice(0, 77) + '...' : sub)}</div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+  `;
+}
+
+function switchToInsights() {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  const insightsTab = document.querySelector('.tab[data-tab="insights"]');
+  insightsTab.classList.add('active');
+  document.getElementById('tab-insights').classList.add('active');
+  loadTabData('insights');
+}
+
+// ========== GAMIFICATION ==========
+function renderGamification(g) {
+  const container = document.getElementById('gamification-container');
+  if (!g) { container.innerHTML = ''; return; }
+
+  const { score, achievements, streak } = g;
+
+  // Score ring color
+  const scoreColor = score.total >= 80 ? '#34d399' : score.total >= 50 ? '#fbbf24' : '#f87171';
+  const circumference = 2 * Math.PI * 52;
+  const offset = circumference - (score.total / 100) * circumference;
+
+  const factorLabels = { cache: 'Cache', modelChoice: 'Model', sessionEfficiency: 'Sessions', costTrend: 'Cost' };
+  const factorColors = { cache: '#f472b6', modelChoice: '#38bdf8', sessionEfficiency: '#34d399', costTrend: '#fb923c' };
+  const factorTips = {
+    cache: 'Cache hit rate — how often cached context is reused vs recreated. Improve: use longer sessions so context stays cached.',
+    modelChoice: 'Model selection — using Sonnet for quick tasks (6 msgs or fewer). Improve: start short tasks with /model sonnet.',
+    sessionEfficiency: 'Session quality — ratio of substantial sessions vs throwaway ones (3 msgs or fewer). Improve: batch small questions into fewer sessions.',
+    costTrend: 'Cost trend — recent cost/message vs your overall average. Lower recent costs = improving. Improve: leverage caching and use Sonnet more.'
+  };
+
+  // Achievement icons
+  const achIcons = {
+    dollar: '\ud83d\udcb5', money: '\ud83d\udcb0', whale: '\ud83d\udc33',
+    cache: '\u26a1', penny: '\ud83e\ude99', sonnet: '\ud83c\udfb5',
+    marathon: '\ud83c\udfc3', night: '\ud83c\udf19', centurion: '\ud83c\udfaf', toolsmith: '\ud83d\udd27',
+    fire: '\ud83d\udd25', dedicated: '\ud83d\udcaa'
+  };
+
+  const unlockedCount = achievements.filter(a => a.unlocked).length;
+
+  // Find weakest factor for the improvement tip
+  const weakest = Object.entries(score.factors).sort((a, b) => a[1] - b[1])[0];
+  const weakestTip = weakest ? factorTips[weakest[0]] : '';
+
+  container.innerHTML = `
+    <div class="top-insights-label">Your Score & Achievements</div>
+    <div class="gamification-row">
+      <div class="score-card">
+        <div class="score-label has-tooltip">Efficiency Score <span class="tip-icon">?</span>
+          <span class="tip-text">A 0-100 composite score based on 4 factors: Cache hit rate (30%), Model choice for short tasks (25%), Session quality (25%), and Cost trend (20%). Higher is better — green 80+, yellow 50-79, red below 50.</span>
+        </div>
+        <div class="score-ring-wrap">
+          <svg width="120" height="120" viewBox="0 0 120 120">
+            <circle class="score-ring-bg" cx="60" cy="60" r="52"/>
+            <circle class="score-ring-fg" cx="60" cy="60" r="52"
+              stroke="${scoreColor}"
+              stroke-dasharray="${circumference}"
+              stroke-dashoffset="${circumference}"
+              data-target="${offset}"/>
+          </svg>
+          <div class="score-ring-value" style="color:${scoreColor}">${score.total}</div>
+        </div>
+        <div class="score-factors">
+          ${Object.entries(score.factors).map(([key, val]) => `
+            <div class="score-factor" data-tip="${factorTips[key].replace(/"/g, '&quot;')}">
+              <span>${factorLabels[key]}</span>
+              <div class="score-factor-bar">
+                <div class="score-factor-fill" style="width:0%;background:${factorColors[key]}" data-target="${val}%"></div>
+              </div>
+              <span class="mono" style="width:28px;text-align:right">${val}</span>
+            </div>
+          `).join('')}
+        </div>
+        ${weakest && weakest[1] < 70 ? `<div class="score-improve-tip">Improve <strong>${factorLabels[weakest[0]]}</strong> (${weakest[1]}): ${weakestTip.split('. Improve: ')[1] || ''}</div>` : ''}
+      </div>
+      <div class="streak-card">
+        <div class="streak-flame">${streak.current > 0 ? '\ud83d\udd25' : '\u2744\ufe0f'}</div>
+        <div class="streak-count">${streak.current}</div>
+        <div class="streak-label">Day Streak</div>
+        <div class="streak-best">Longest: <strong>${streak.longest}</strong> days</div>
+      </div>
+      <div class="achievements-card">
+        <div class="achievements-label">Achievements <span>${unlockedCount}/${achievements.length}</span></div>
+        <div class="achievements-grid">
+          ${achievements.map(a => {
+            const tipHtml = esc(a.description) + (!a.unlocked && a.progress ? '<span class="tip-progress">' + esc(a.progress) + '</span>' : '');
+            return `
+            <div class="achievement ${a.unlocked ? 'unlocked' : 'locked'}" data-tip="${tipHtml.replace(/"/g, '&quot;')}">
+              <div class="achievement-icon">${achIcons[a.icon] || '\ud83c\udfc6'}</div>
+              <div class="achievement-title">${esc(a.title)}</div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Animate score ring
+  requestAnimationFrame(() => {
+    const ring = container.querySelector('.score-ring-fg');
+    if (ring) ring.style.strokeDashoffset = ring.dataset.target;
+    container.querySelectorAll('.score-factor-fill').forEach(el => {
+      el.style.width = el.dataset.target;
+    });
+  });
+
+  // Wire up floating tooltip for achievements
+  const tooltip = document.getElementById('ach-tooltip');
+  container.querySelectorAll('.achievement[data-tip]').forEach(el => {
+    el.addEventListener('mouseenter', () => {
+      tooltip.innerHTML = el.dataset.tip;
+      tooltip.style.display = 'block';
+      const rect = el.getBoundingClientRect();
+      const tipRect = tooltip.getBoundingClientRect();
+      let left = rect.left + rect.width / 2 - tipRect.width / 2;
+      if (left < 8) left = 8;
+      if (left + tipRect.width > window.innerWidth - 8) left = window.innerWidth - 8 - tipRect.width;
+      tooltip.style.left = left + 'px';
+      tooltip.style.top = (rect.top - tipRect.height - 10) + 'px';
+    });
+    el.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+  });
+
+  // Wire up floating tooltip for score factors
+  container.querySelectorAll('.score-factor[data-tip]').forEach(el => {
+    el.style.cursor = 'help';
+    el.addEventListener('mouseenter', () => {
+      tooltip.innerHTML = el.dataset.tip;
+      tooltip.style.display = 'block';
+      const rect = el.getBoundingClientRect();
+      const tipRect = tooltip.getBoundingClientRect();
+      let left = rect.left + rect.width / 2 - tipRect.width / 2;
+      if (left < 8) left = 8;
+      if (left + tipRect.width > window.innerWidth - 8) left = window.innerWidth - 8 - tipRect.width;
+      tooltip.style.left = left + 'px';
+      tooltip.style.top = (rect.top - tipRect.height - 10) + 'px';
+    });
+    el.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+  });
+}
+
+function renderDailyChart(d) {
+  const ctx = document.getElementById('chart-daily').getContext('2d');
+  if (charts.daily) charts.daily.destroy();
+  charts.daily = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: d.dailyActivity.map(a => a.date),
+      datasets: [
+        { label: 'Messages', data: d.dailyActivity.map(a => a.messageCount), backgroundColor: 'rgba(167, 139, 250, 0.3)', borderColor: '#a78bfa', borderWidth: 1, borderRadius: 4, yAxisID: 'y' },
+        { label: 'Tool Calls', data: d.dailyActivity.map(a => a.toolCallCount), backgroundColor: 'rgba(251, 146, 60, 0.3)', borderColor: '#fb923c', borderWidth: 1, borderRadius: 4, yAxisID: 'y' },
+        { label: 'Sessions', data: d.dailyActivity.map(a => a.sessionCount), type: 'line', borderColor: '#34d399', backgroundColor: 'rgba(52, 211, 153, 0.1)', fill: true, tension: 0.4, pointRadius: 3, pointBackgroundColor: '#34d399', yAxisID: 'y1' }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      scales: {
+        y: { beginAtZero: true, position: 'left', grid: { color: 'rgba(255,255,255,0.04)' } },
+        y1: { beginAtZero: true, position: 'right', grid: { display: false } },
+        x: { grid: { display: false }, ticks: { maxTicksLimit: 15 } }
+      },
+      plugins: { legend: { position: 'top' } }
+    }
+  });
+}
+
+function renderTokensDailyChart(d) {
+  if (!d.dailyTokens || d.dailyTokens.length === 0) return;
+  const ctx = document.getElementById('chart-tokens-daily').getContext('2d');
+  if (charts.tokensDaily) charts.tokensDaily.destroy();
+
+  // Get all models across all days
+  const allModels = new Set();
+  for (const day of d.dailyTokens) {
+    for (const m of Object.keys(day.byModel)) allModels.add(m);
+  }
+  const models = [...allModels];
+
+  // Model display names
+  const modelNames = { 'claude-opus-4-6': 'Opus 4.6', 'claude-opus-4-5-20251101': 'Opus 4.5', 'claude-sonnet-4-5-20250929': 'Sonnet 4.5', 'claude-sonnet-4-6': 'Sonnet 4.6', 'claude-haiku-4-5-20251001': 'Haiku 4.5' };
+
+  const datasets = models.map((m, i) => ({
+    label: modelNames[m] || m.replace('claude-', ''),
+    data: d.dailyTokens.map(day => day.byModel[m] || 0),
+    backgroundColor: MODEL_COLORS[i % MODEL_COLORS.length] + '99',
+    borderColor: MODEL_COLORS[i % MODEL_COLORS.length],
+    borderWidth: 1
+  }));
+
+  charts.tokensDaily = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: d.dailyTokens.map(t => t.date), datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { stacked: true, grid: { display: false }, ticks: { maxTicksLimit: 15 } },
+        y: { stacked: true, beginAtZero: true, grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { callback: v => fmtTokens(v) } }
+      },
+      plugins: {
+        legend: { position: 'top' },
+        tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + fmtTokens(ctx.parsed.y) } }
+      }
+    }
+  });
+}
+
+function renderModelCostChart(d) {
+  const ctx = document.getElementById('chart-model-cost').getContext('2d');
+  if (charts.modelCost) charts.modelCost.destroy();
+  charts.modelCost = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: d.modelBreakdown.map(m => m.displayName),
+      datasets: [{ data: d.modelBreakdown.map(m => m.totalCost), backgroundColor: MODEL_COLORS.slice(0, d.modelBreakdown.length), borderWidth: 0 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: ctx => ctx.label + ': ' + fmtCost(ctx.parsed) } } }
+    }
+  });
+}
+
+function renderTokenComposition(d) {
+  const tc = d.tokenComposition;
+  document.getElementById('token-bar').innerHTML = `
+    <div class="input" style="width:${tc.percentages.input}%" title="Input: ${fmtTokens(tc.input)} (${tc.percentages.input}%)"></div>
+    <div class="output" style="width:${tc.percentages.output}%" title="Output: ${fmtTokens(tc.output)} (${tc.percentages.output}%)"></div>
+    <div class="cache-read" style="width:${tc.percentages.cacheRead}%" title="Cache Read: ${fmtTokens(tc.cacheRead)} (${tc.percentages.cacheRead}%)"></div>
+    <div class="cache-write" style="width:${tc.percentages.cacheWrite}%" title="Cache Write: ${fmtTokens(tc.cacheWrite)} (${tc.percentages.cacheWrite}%)"></div>
+  `;
+  const ctx = document.getElementById('chart-tokens').getContext('2d');
+  if (charts.tokens) charts.tokens.destroy();
+  charts.tokens = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Input', 'Output', 'Cache Read', 'Cache Write'],
+      datasets: [{ data: [tc.input, tc.output, tc.cacheRead, tc.cacheWrite], backgroundColor: ['#a78bfa', '#34d399', '#f472b6', '#fb923c'], borderWidth: 0, borderRadius: 4 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => fmtTokens(ctx.parsed.x) + ' tokens' } } },
+      scales: { x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { callback: v => fmtTokens(v) } }, y: { grid: { display: false } } }
+    }
+  });
+}
+
+function renderModelTable(d) {
+  document.querySelector('#model-table tbody').innerHTML = d.modelBreakdown.map(m => `
+    <tr>
+      <td>${m.displayName}</td>
+      <td class="text-right mono">${fmtCost(m.costBreakdown.input)}</td>
+      <td class="text-right mono">${fmtCost(m.costBreakdown.output)}</td>
+      <td class="text-right mono">${fmtCost(m.costBreakdown.cacheRead)}</td>
+      <td class="text-right mono">${fmtCost(m.costBreakdown.cacheWrite)}</td>
+      <td class="text-right mono text-accent">${fmtCost(m.totalCost)}</td>
+    </tr>
+  `).join('');
+}
+
+// ========== SESSIONS ==========
+async function loadSessions() {
+  try {
+    const data = await api('sessions');
+    state.sessions = data;
+    renderSessions(data);
+  } catch (err) { document.getElementById('sessions-loading').innerHTML = '<div>Error: ' + err.message + '</div>'; }
+}
+
+function renderSessions(sessions) {
+  document.getElementById('sessions-loading').style.display = 'none';
+  document.getElementById('sessions-content').style.display = 'block';
+  document.getElementById('session-count').textContent = '(' + sessions.length + ')';
+  const tbody = document.querySelector('#sessions-table tbody');
+  fillSessionTable(tbody, sessions);
+
+  let sortCol = 'date', sortDir = -1;
+  document.querySelectorAll('#sessions-table th[data-sort]').forEach(th => {
+    th.addEventListener('click', () => {
+      const col = th.dataset.sort;
+      if (sortCol === col) sortDir *= -1; else { sortCol = col; sortDir = -1; }
+      const sorted = [...sessions].sort((a, b) => {
+        let va = a[col], vb = b[col];
+        if (typeof va === 'string') return va.localeCompare(vb) * sortDir;
+        return ((va || 0) - (vb || 0)) * sortDir;
+      });
+      fillSessionTable(tbody, sorted);
+    });
+  });
+}
+
+function fillSessionTable(tbody, sessions) {
+  tbody.innerHTML = sessions.map(s => `
+    <tr>
+      <td class="mono">${s.date || '\u2014'}</td>
+      <td title="${esc(s.project || '')}">${shortPath(s.project)}</td>
+      <td title="${esc(s.summary || '')}">${esc(truncate(s.summary || s.firstPrompt || '\u2014', 50))}</td>
+      <td class="text-right mono">${fmt(s.messages || 0)}</td>
+      <td class="text-right mono text-accent">${fmtCost(s.cost || 0)}</td>
+      <td class="text-right mono text-dim">${fmtDuration(s.duration)}</td>
+    </tr>
+  `).join('');
+}
+
+// ========== PROJECTS ==========
+async function loadProjects() {
+  try {
+    const data = await api('projects');
+    state.projects = data;
+    renderProjects(data);
+  } catch (err) { document.getElementById('projects-loading').innerHTML = '<div>Error: ' + err.message + '</div>'; }
+}
+
+function renderProjects(projects) {
+  document.getElementById('projects-loading').style.display = 'none';
+  document.getElementById('projects-content').style.display = 'block';
+  const ctx = document.getElementById('chart-project-cost').getContext('2d');
+  if (charts.projectCost) charts.projectCost.destroy();
+  const top10 = projects.slice(0, 10);
+  charts.projectCost = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: top10.map(p => shortPath(p.project)),
+      datasets: [{ label: 'Estimated Cost', data: top10.map(p => p.cost), backgroundColor: 'rgba(167, 139, 250, 0.4)', borderColor: '#a78bfa', borderWidth: 1, borderRadius: 4 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => fmtCost(ctx.parsed.x) } } },
+      scales: { x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { callback: v => fmtCost(v) } }, y: { grid: { display: false } } }
+    }
+  });
+  document.querySelector('#projects-table tbody').innerHTML = projects.map(p => `
+    <tr>
+      <td title="${esc(p.project)}">${shortPath(p.project)}</td>
+      <td class="text-right mono">${fmt(p.sessions)}</td>
+      <td class="text-right mono">${fmt(p.messages)}</td>
+      <td class="text-right mono text-accent">${fmtCost(p.cost)}</td>
+    </tr>
+  `).join('');
+}
+
+// ========== PATTERNS ==========
+async function loadPatterns() {
+  try {
+    const data = await api('patterns');
+    state.patterns = data;
+    renderPatterns(data);
+  } catch (err) { document.getElementById('patterns-loading').innerHTML = '<div>Error: ' + err.message + '</div>'; }
+}
+
+function renderPatterns(data) {
+  document.getElementById('patterns-loading').style.display = 'none';
+  document.getElementById('patterns-content').style.display = 'block';
+
+  const heatCtx = document.getElementById('chart-heatmap').getContext('2d');
+  if (charts.heatmap) charts.heatmap.destroy();
+  const hours = Array.from({length: 24}, (_, i) => i);
+  const maxHour = Math.max(...Object.values(data.hourCounts || {1:1}), 1);
+  charts.heatmap = new Chart(heatCtx, {
+    type: 'bar',
+    data: {
+      labels: hours.map(h => h.toString().padStart(2, '0') + ':00'),
+      datasets: [{
+        label: 'Sessions',
+        data: hours.map(h => data.hourCounts[h] || 0),
+        backgroundColor: hours.map(h => {
+          const v = data.hourCounts[h] || 0;
+          const intensity = v / maxHour;
+          const r = Math.round(167 + (244 - 167) * intensity);
+          const g = Math.round(139 + (114 - 139) * intensity);
+          const b = Math.round(250 + (182 - 250) * intensity);
+          return `rgba(${r}, ${g}, ${b}, ${0.2 + intensity * 0.8})`;
+        }),
+        borderWidth: 0, borderRadius: 6
+      }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.04)' } }, x: { grid: { display: false } } } }
+  });
+
+  const peakCtx = document.getElementById('chart-peak-hours').getContext('2d');
+  if (charts.peakHours) charts.peakHours.destroy();
+  const sortedHours = Object.entries(data.hourCounts || {}).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  charts.peakHours = new Chart(peakCtx, {
+    type: 'bar',
+    data: {
+      labels: sortedHours.map(([h]) => h.toString().padStart(2, '0') + ':00'),
+      datasets: [{ label: 'Sessions', data: sortedHours.map(([, v]) => v), backgroundColor: 'rgba(52, 211, 153, 0.4)', borderColor: '#34d399', borderWidth: 1, borderRadius: 6 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.04)' } }, x: { grid: { display: false } } } }
+  });
+
+  const weekCtx = document.getElementById('chart-weekly').getContext('2d');
+  if (charts.weekly) charts.weekly.destroy();
+  if (data.weeklyComparison && data.weeklyComparison.length > 0) {
+    charts.weekly = new Chart(weekCtx, {
+      type: 'bar',
+      data: {
+        labels: data.weeklyComparison.map(w => 'W' + w.week),
+        datasets: [
+          { label: 'Messages', data: data.weeklyComparison.map(w => w.messages), backgroundColor: 'rgba(167, 139, 250, 0.3)', borderColor: '#a78bfa', borderWidth: 1, borderRadius: 4, yAxisID: 'y' },
+          { label: 'Sessions', data: data.weeklyComparison.map(w => w.sessions), type: 'line', borderColor: '#f472b6', backgroundColor: 'rgba(244, 114, 182, 0.1)', fill: true, tension: 0.4, yAxisID: 'y1' }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        scales: { y: { beginAtZero: true, position: 'left', grid: { color: 'rgba(255,255,255,0.04)' } }, y1: { beginAtZero: true, position: 'right', grid: { display: false } }, x: { grid: { display: false } } }
+      }
+    });
+  }
+}
+
+// ========== EXPENSIVE PROMPTS ==========
+async function loadExpensive() {
+  try {
+    const data = await api('expensive-prompts');
+    state.expensive = data;
+    renderExpensive(data);
+  } catch (err) { document.getElementById('expensive-loading').innerHTML = '<div>Error: ' + err.message + '</div>'; }
+}
+
+function renderExpensive(prompts) {
+  document.getElementById('expensive-loading').style.display = 'none';
+  const container = document.getElementById('expensive-content');
+  container.style.display = 'block';
+
+  if (!prompts || prompts.length === 0) {
+    container.innerHTML = '<div class="card"><div class="card-value sessions">No expensive prompts found</div></div>';
+    return;
+  }
+
+  // Summary cards
+  const totalCost = prompts.reduce((s, p) => s + p.cost, 0);
+  const avgCost = totalCost / prompts.length;
+  const topModel = mode(prompts.map(p => p.model).filter(Boolean));
+
+  container.innerHTML = `
+    <div class="cards" style="margin-bottom:20px">
+      <div class="card"><div class="card-label">Top ${prompts.length} Prompts Total</div><div class="card-value cost">${fmtCost(totalCost)}</div></div>
+      <div class="card"><div class="card-label">Most Expensive</div><div class="card-value cost">${fmtCost(prompts[0].cost)}</div></div>
+      <div class="card"><div class="card-label">Average Cost</div><div class="card-value messages">${fmtCost(avgCost)}</div></div>
+      <div class="card"><div class="card-label">Most Common Model</div><div class="card-value tools" style="font-size:18px">${esc(shortModelName(topModel))}</div></div>
+    </div>
+    <div id="expensive-list"></div>
+  `;
+
+  const list = document.getElementById('expensive-list');
+  list.innerHTML = prompts.slice(0, 30).map((p, i) => `
+    <div class="prompt-card">
+      <div class="prompt-header">
+        <div style="flex:1">
+          <span class="text-dim mono" style="font-size:12px">#${i + 1}</span>
+          <span class="text-dim" style="font-size:12px; margin-left:8px">${p.date || ''}</span>
+          <span class="text-dim" style="font-size:12px; margin-left:8px">${esc(shortPath(p.project))}</span>
+        </div>
+        <div class="prompt-cost">${fmtCost(p.cost)}</div>
+      </div>
+      <div class="prompt-text" onclick="this.classList.toggle('expanded')">${esc(p.prompt)}</div>
+      <div class="prompt-meta">
+        <span>Model: <strong>${esc(shortModelName(p.model))}</strong></span>
+        <span>Output: <strong>${fmtTokens(p.outputTokens)}</strong></span>
+        <span>Cache Write: <strong>${fmtTokens(p.cacheWriteTokens)}</strong></span>
+        <span>Cache Read: <strong>${fmtTokens(p.cacheReadTokens)}</strong></span>
+        <span>Turn: <strong>${p.turnIndex + 1}</strong></span>
+        ${p.toolsUsed.length > 0 ? '<span>Tools: <strong>' + esc(p.toolsUsed.join(', ')) + '</strong></span>' : ''}
+      </div>
+      ${p.reasons.length > 0 ? '<div class="prompt-reasons">' + p.reasons.map(r => '<div class="prompt-reason">' + esc(r) + '</div>').join('') + '</div>' : ''}
+    </div>
+  `).join('');
+}
+
+function shortModelName(m) {
+  if (!m) return 'Unknown';
+  return m.replace('claude-', '').replace(/-\d{8}$/, '');
+}
+
+function mode(arr) {
+  const counts = {};
+  for (const v of arr) counts[v] = (counts[v] || 0) + 1;
+  return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || '';
+}
+
+// ========== INSIGHTS ==========
+async function loadInsights() {
+  try {
+    const [data, gamification] = await Promise.all([api('insights'), api('gamification')]);
+    state.insights = data;
+    renderGamification(gamification);
+    renderInsights(data);
+  } catch (err) { document.getElementById('insights-loading').innerHTML = '<div>Error: ' + err.message + '</div>'; }
+}
+
+function renderInsights(insights) {
+  document.getElementById('insights-loading').style.display = 'none';
+  document.getElementById('insights-content').style.display = 'block';
+  const container = document.getElementById('insights-list');
+
+  if (!insights || insights.length === 0) {
+    container.innerHTML = '<div class="card"><div class="card-value sessions">No insights yet</div><div class="card-sub">Use Claude Code more to generate insights.</div></div>';
+    return;
+  }
+
+  container.innerHTML = insights.map((insight, i) => `
+    <div class="insight-card" id="insight-${i}">
+      <div class="insight-header" onclick="toggleInsight(${i})">
+        <div class="insight-icon ${insight.severity}">
+          ${insight.severity === 'warning' ? '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1L1 14h14L8 1z" stroke="#fbbf24" stroke-width="1.5" fill="none"/><path d="M8 6v4M8 11.5v.5" stroke="#fbbf24" stroke-width="1.5" stroke-linecap="round"/></svg>' : '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="#a78bfa" stroke-width="1.5"/><circle cx="8" cy="5.5" r="0.75" fill="#a78bfa"/><path d="M8 7.5v4" stroke="#a78bfa" stroke-width="1.5" stroke-linecap="round"/></svg>'}
+        </div>
+        <div class="insight-title">${esc(insight.title)}</div>
+        ${insight.helpText ? '<div class="insight-help-btn" onclick="event.stopPropagation(); toggleHelp(' + i + ')" title="What does this mean?">?</div>' : ''}
+        <div class="insight-chevron">\u25BC</div>
+      </div>
+      ${insight.helpText ? '<div class="insight-help" id="insight-help-' + i + '"><div class="insight-help-inner">' + esc(insight.helpText) + '</div></div>' : ''}
+      <div class="insight-body">
+        <div class="insight-body-inner">
+          <div class="insight-desc">${esc(insight.description)}</div>
+          ${insight.detail ? '<div class="insight-detail">' + esc(insight.detail) + '</div>' : ''}
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleInsight(i) {
+  const card = document.getElementById('insight-' + i);
+  card.classList.toggle('open');
+}
+
+function toggleHelp(i) {
+  const help = document.getElementById('insight-help-' + i);
+  if (help) help.classList.toggle('open');
+}
+
+// ========== CONTRIBUTIONS ==========
+async function loadContributions() {
+  try {
+    const data = await api('contributions');
+    state.contributions = data;
+    renderContributions(data);
+  } catch (err) { document.getElementById('contrib-loading').innerHTML = '<div>Error: ' + err.message + '</div>'; }
+}
+
+function renderContributions(data) {
+  document.getElementById('contrib-loading').style.display = 'none';
+  const container = document.getElementById('contrib-content');
+  container.style.display = 'block';
+  container.innerHTML = `
+    <div class="cards">
+      <div class="card"><div class="card-label">Lines Written</div><div class="card-value sessions">${fmt(data.totalLinesWritten || 0)}</div></div>
+      <div class="card"><div class="card-label">Lines Edited</div><div class="card-value messages">${fmt(data.totalLinesEdited || 0)}</div></div>
+      <div class="card"><div class="card-label">Files Touched</div><div class="card-value tools">${fmt(data.totalFilesTouched || 0)}</div></div>
+      <div class="card"><div class="card-label">Co-Authored Commits</div><div class="card-value cost">${fmt(data.coAuthoredCommits || 0)}</div></div>
+    </div>
+    ${data.topFiles && data.topFiles.length > 0 ? `
+    <div class="table-card" style="margin-top:16px">
+      <h3>Most Edited Files</h3>
+      <table>
+        <thead><tr><th>File</th><th class="text-right">Changes</th></tr></thead>
+        <tbody>${data.topFiles.slice(0, 20).map(f => `<tr><td class="mono">${esc(f.file)}</td><td class="text-right mono">${fmt(f.changes)}</td></tr>`).join('')}</tbody>
+      </table>
+    </div>` : ''}
+  `;
+}
+
+// ========== SECURITY ==========
+async function loadSecurity() {
+  try {
+    const data = await api('security');
+    state.security = data;
+    renderSecurity(data);
+  } catch (err) { document.getElementById('security-loading').innerHTML = '<div>Error: ' + err.message + '</div>'; }
+}
+
+function renderSecurity(data) {
+  document.getElementById('security-loading').style.display = 'none';
+  const container = document.getElementById('security-content');
+  container.style.display = 'block';
+
+  const s = data.summary;
+
+  // Summary cards
+  let html = `<div class="cards">
+    <div class="card"><div class="card-label">Files Accessed</div><div class="card-value sessions">${fmt(s.totalFilesAccessed)}</div><div class="card-sub">Unique file paths</div></div>
+    <div class="card"><div class="card-label">Bash Commands</div><div class="card-value tools">${fmt(s.totalBashCommands)}</div><div class="card-sub">${s.flaggedBashCommands} flagged</div></div>
+    <div class="card"><div class="card-label">Directories Reached</div><div class="card-value messages">${fmt(s.totalDirectories)}</div><div class="card-sub">Unique directories</div></div>
+    <div class="card"><div class="card-label">Sensitive Flags</div><div class="card-value cost">${fmt(s.sensitiveFlags)}</div><div class="card-sub">Sensitive paths accessed</div></div>
+  </div>`;
+
+  // File access table
+  if (data.fileAccess.length > 0) {
+    html += `<div class="security-section"><div class="table-card">
+      <h3>File Access Audit</h3>
+      <table id="security-files-table">
+        <thead><tr>
+          <th data-sort="path">Path</th>
+          <th class="text-right" data-sort="reads">Reads</th>
+          <th class="text-right" data-sort="writes">Writes</th>
+          <th class="text-right" data-sort="edits">Edits</th>
+          <th class="text-right" data-sort="total">Total</th>
+          <th class="text-right">Flag</th>
+        </tr></thead>
+        <tbody>${data.fileAccess.slice(0, 50).map(f => `<tr class="${f.sensitive ? 'sensitive-row' : ''}">
+          <td class="mono">${esc(f.path)}</td>
+          <td class="text-right mono">${f.reads}</td>
+          <td class="text-right mono">${f.writes}</td>
+          <td class="text-right mono">${f.edits}</td>
+          <td class="text-right mono">${f.total}</td>
+          <td class="text-right">${f.sensitive ? '<span class="sensitive-flag">SENSITIVE</span>' : ''}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div></div>`;
+  }
+
+  // Bash command log
+  const catLabels = {
+    destructive: { label: 'Destructive', icon: '\u26a0\ufe0f' },
+    permissions: { label: 'Permission Changes', icon: '\ud83d\udd12' },
+    network: { label: 'Network / External', icon: '\ud83c\udf10' },
+    packageManagers: { label: 'Package Managers', icon: '\ud83d\udce6' },
+    safe: { label: 'Safe', icon: '\u2705' }
+  };
+
+  html += `<div class="security-section"><h3>Bash Command Log</h3>`;
+  for (const [cat, meta] of Object.entries(catLabels)) {
+    const cmds = data.bashCommands[cat] || [];
+    if (cmds.length === 0) continue;
+    const autoOpen = (cat === 'destructive' || cat === 'permissions') ? ' open' : '';
+    html += `<div class="bash-category cat-${cat}${autoOpen}">
+      <div class="bash-category-header" onclick="this.parentElement.classList.toggle('open')">
+        <div class="bash-category-title">${meta.icon} ${meta.label} <span class="bash-category-count">${cmds.length}</span></div>
+        <span class="bash-category-chevron">\u25BC</span>
+      </div>
+      <div class="bash-category-body">
+        ${cmds.slice(0, 100).map(c => `<div class="bash-cmd">
+          <span class="bash-cmd-text">${esc(c.command)}</span>
+          <span class="bash-cmd-date">${c.date ? new Date(c.date).toLocaleDateString() : ''}</span>
+        </div>`).join('')}
+        ${cmds.length > 100 ? `<div class="bash-cmd text-dim">... and ${cmds.length - 100} more</div>` : ''}
+      </div>
+    </div>`;
+  }
+  html += `</div>`;
+
+  // Directory scope
+  const scope = data.directoryScope;
+  html += `<div class="security-section"><div class="table-card">
+    <h3>Directory Scope Map</h3>`;
+
+  if (scope.inProject.length > 0) {
+    html += `<div class="dir-scope-group">
+      <div class="dir-scope-label">In Project</div>
+      ${scope.inProject.slice(0, 30).map(d => `<div class="dir-entry">
+        <span class="mono">${esc(d.dir)}</span>
+        <span class="dir-entry-count">${d.accessCount}</span>
+      </div>`).join('')}
+    </div>`;
+  }
+
+  if (scope.outsideProject.length > 0) {
+    html += `<div class="dir-scope-group">
+      <div class="dir-scope-label outside">Outside Project</div>
+      ${scope.outsideProject.map(d => `<div class="dir-entry">
+        <span class="mono">${esc(d.dir)}${d.sensitive ? ' <span class="sensitive-flag">SENSITIVE</span>' : ''}</span>
+        <span class="dir-entry-count">${d.accessCount}</span>
+      </div>`).join('')}
+    </div>`;
+  }
+
+  html += `</div></div>`;
+
+  container.innerHTML = html;
+
+  // Wire up sortable columns for file access table
+  const fileTable = document.getElementById('security-files-table');
+  if (fileTable) {
+    fileTable.querySelectorAll('th[data-sort]').forEach(th => {
+      th.addEventListener('click', () => sortSecurityTable(data.fileAccess, th.dataset.sort));
+    });
+  }
+}
+
+let securitySortField = 'total';
+let securitySortAsc = false;
+
+function sortSecurityTable(fileAccess, field) {
+  if (securitySortField === field) {
+    securitySortAsc = !securitySortAsc;
+  } else {
+    securitySortField = field;
+    securitySortAsc = field === 'path';
+  }
+
+  const sorted = [...fileAccess].sort((a, b) => {
+    const av = a[field], bv = b[field];
+    if (typeof av === 'string') return securitySortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+    return securitySortAsc ? av - bv : bv - av;
+  });
+
+  const tbody = document.querySelector('#security-files-table tbody');
+  tbody.innerHTML = sorted.slice(0, 50).map(f => `<tr class="${f.sensitive ? 'sensitive-row' : ''}">
+    <td class="mono">${esc(f.path)}</td>
+    <td class="text-right mono">${f.reads}</td>
+    <td class="text-right mono">${f.writes}</td>
+    <td class="text-right mono">${f.edits}</td>
+    <td class="text-right mono">${f.total}</td>
+    <td class="text-right">${f.sensitive ? '<span class="sensitive-flag">SENSITIVE</span>' : ''}</td>
+  </tr>`).join('');
+}
+
+// ========== SSE ==========
+if (window.EventSource) {
+  try {
+    const es = new EventSource('/events');
+    es.addEventListener('refresh', () => {
+      for (const key of Object.keys(state)) { state[key] = null; }
+      const activeTab = document.querySelector('.tab.active')?.dataset.tab;
+      if (activeTab) loadTabData(activeTab);
+    });
+    es.onerror = () => es.close();
+  } catch {}
+}
+
+// ========== GLOBAL TOOLTIP FOR ? ICONS ==========
+function initTooltips() {
+  const tooltip = document.getElementById('ach-tooltip');
+  document.querySelectorAll('.has-tooltip .tip-icon').forEach(icon => {
+    const parent = icon.closest('.has-tooltip');
+    const tipText = parent.querySelector('.tip-text');
+    if (!tipText) return;
+    const text = tipText.textContent.trim();
+    icon.addEventListener('mouseenter', () => {
+      tooltip.textContent = text;
+      tooltip.style.display = 'block';
+      const rect = icon.getBoundingClientRect();
+      const tipRect = tooltip.getBoundingClientRect();
+      let left = rect.left + rect.width / 2 - tipRect.width / 2;
+      if (left < 8) left = 8;
+      if (left + tipRect.width > window.innerWidth - 8) left = window.innerWidth - 8 - tipRect.width;
+      tooltip.style.left = left + 'px';
+      tooltip.style.top = (rect.top - tipRect.height - 10) + 'px';
+    });
+    icon.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+  });
+}
+
+// Re-init tooltips after overview renders (cards are dynamic)
+const _origRenderOverview = renderOverview;
+renderOverview = function(d) { _origRenderOverview(d); initTooltips(); };
+
+// ========== INIT ==========
+loadProjectsList();
+loadOverview();
+initTooltips();
+</script>
+</body>
+</html>
