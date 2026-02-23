@@ -17,6 +17,10 @@ If you use Claude Code daily, costs add up fast. But there's no built-in way to 
 
 **claude-burn-rate** answers all of that — in seconds — using data Claude Code already stores locally.
 
+<p align="center">
+  <img src="docs/screenshots/overview.png" alt="Dashboard overview showing cost summary, daily activity chart, and key insights" width="100%"/>
+</p>
+
 ---
 
 ## Quick Start
