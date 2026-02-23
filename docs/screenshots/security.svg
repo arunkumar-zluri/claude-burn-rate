@@ -75,7 +75,7 @@
   <text x="350" y="404" fill="#6b7280" font-size="10">ml-pipeline • Feb 21</text>
 
   <rect x="70" y="420" width="1080" height="30" rx="6" fill="rgba(255,255,255,0.02)"/>
-  <text x="86" y="440" fill="#f87171" font-size="11" font-weight="600" font-family="'JetBrains Mono', monospace">rm -rf node_modules/ && rm package-lock.json</text>
+  <text x="86" y="440" fill="#f87171" font-size="11" font-weight="600" font-family="'JetBrains Mono', monospace">rm -rf node_modules/ &amp;&amp; rm package-lock.json</text>
   <text x="500" y="440" fill="#6b7280" font-size="10">acme-dashboard • Feb 20</text>
 
   <!-- Network section (expanded) -->
