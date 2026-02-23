@@ -193,7 +193,10 @@ async function getSecurityAudit() {
         if (session.projectPath) projectWorkDirs.add(session.projectPath);
 
         // Feature 3: track permissionMode
-        if (session.permissionMode && session.permissionMode !== 'default') {
+        // Only flag modes that bypass safety confirmations broadly.
+        // acceptEdits is a convenience mode (auto-approve file edits only) — not dangerous.
+        const dangerousModes = new Set(['bypassPermissions', 'fullAutoMode', 'yolo']);
+        if (session.permissionMode && dangerousModes.has(session.permissionMode)) {
           dangerousSessions[sessionId] = {
             mode: session.permissionMode,
             date: session.firstTimestamp ? new Date(session.firstTimestamp).toISOString() : null,

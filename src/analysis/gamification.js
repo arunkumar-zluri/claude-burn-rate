@@ -6,7 +6,7 @@
 function getGamification(overview, sessions) {
   const score = computeScore(overview, sessions);
   const achievements = computeAchievements(overview, sessions);
-  const streak = computeStreak(overview);
+  const streak = computeStreak(overview, sessions);
 
   return { score, achievements, streak };
 }
@@ -158,7 +158,7 @@ function computeAchievements(overview, sessions) {
   }
 
   // Streaks
-  const { current, longest } = computeStreak(overview);
+  const { current, longest } = computeStreak(overview, sessions);
 
   const fmtCost = n => '$' + n.toFixed(2);
   const fmtPct = n => Math.round(n * 100) + '%';
@@ -269,14 +269,28 @@ function computeAchievements(overview, sessions) {
 
 // ========== STREAKS ==========
 
-function computeStreak(overview) {
+function computeStreak(overview, sessions) {
+  // Merge dates from both overview.dailyActivity (stats-cache, may be stale)
+  // and sessions (always fresh from actual session files)
+  const dateSet = new Set();
+
   const dailyActivity = overview.dailyActivity;
-  if (!dailyActivity || dailyActivity.length === 0) {
-    return { current: 0, longest: 0 };
+  if (dailyActivity) {
+    for (const d of dailyActivity) {
+      if (d.date) dateSet.add(d.date);
+    }
   }
 
+  if (sessions) {
+    for (const s of sessions) {
+      if (s.date) dateSet.add(s.date);
+    }
+  }
+
+  if (dateSet.size === 0) return { current: 0, longest: 0 };
+
   // Get sorted unique dates
-  const dates = [...new Set(dailyActivity.map(d => d.date))].sort();
+  const dates = [...dateSet].sort();
   if (dates.length === 0) return { current: 0, longest: 0 };
 
   let longest = 1;

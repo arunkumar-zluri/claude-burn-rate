@@ -44,12 +44,21 @@ async function handleApi(pathname, req, res) {
 
     if (pathname === '/api/insights') {
       const { generateInsights } = require('../analysis/insights.js');
+      const { getAdvancedInsights } = require('../analysis/advanced-insights.js');
       const { readClaudeConfig } = require('../data/config-reader.js');
+      const { getContributions } = require('../analysis/contributions.js');
       const overview = await getOverview(filters);
       const { getSessions } = require('../analysis/sessions.js');
       const [sessions, config] = await Promise.all([getSessions(filters), readClaudeConfig()]);
-      const data = generateInsights(overview, sessions, config);
-      return json(res, data);
+      const baseInsights = generateInsights(overview, sessions, config);
+      let advancedInsights = [];
+      try {
+        const contributions = await getContributions();
+        advancedInsights = await getAdvancedInsights(overview, sessions, contributions);
+      } catch {
+        // Advanced insights are optional — don't break the response
+      }
+      return json(res, [...baseInsights, ...advancedInsights]);
     }
 
     if (pathname === '/api/expensive-prompts') {
@@ -85,6 +94,18 @@ async function handleApi(pathname, req, res) {
     if (pathname === '/api/security') {
       const { getSecurityAudit } = require('../analysis/security.js');
       const data = await getSecurityAudit();
+      return json(res, data);
+    }
+
+    if (pathname === '/api/tool-usage') {
+      const { getToolUsage } = require('../analysis/tool-usage.js');
+      const data = await getToolUsage(filters);
+      return json(res, data);
+    }
+
+    if (pathname === '/api/branch-costs') {
+      const { getBranchCosts } = require('../analysis/branch-costs.js');
+      const data = await getBranchCosts(filters);
       return json(res, data);
     }
 

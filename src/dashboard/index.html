@@ -873,6 +873,19 @@ tr.sensitive-row:hover td { background: rgba(248, 113, 113, 0.08); }
           <tbody></tbody>
         </table>
       </div>
+      <div id="branch-costs-section" style="display:none; margin-top:20px">
+        <h3 style="margin-bottom:12px; font-size:18px; font-weight:700">Cost by Branch</h3>
+        <div class="chart-grid">
+          <div class="chart-card full"><h3>Top Branches by Cost</h3><div class="chart-container"><canvas id="chart-branch-costs"></canvas></div></div>
+        </div>
+        <div class="table-card" style="margin-top:16px">
+          <table id="branch-costs-table">
+            <thead><tr><th>Branch</th><th class="text-right">Sessions</th><th class="text-right">Messages</th><th class="text-right">Est. Cost</th><th class="text-right">Avg/Session</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div id="branch-costs-help" class="insight-help" style="margin-top:8px"></div>
+      </div>
     </div>
   </div>
 
@@ -884,6 +897,20 @@ tr.sensitive-row:hover td { background: rgba(248, 113, 113, 0.08); }
         <div class="chart-card full"><h3>Usage Heatmap (Hour of Day)</h3><div class="chart-container"><canvas id="chart-heatmap"></canvas></div></div>
         <div class="chart-card"><h3>Peak Hours</h3><div class="chart-container"><canvas id="chart-peak-hours"></canvas></div></div>
         <div class="chart-card"><h3>Weekly Comparison</h3><div class="chart-container"><canvas id="chart-weekly"></canvas></div></div>
+      </div>
+      <div id="tool-usage-section" style="display:none; margin-top:20px">
+        <h3 style="margin-bottom:12px; font-size:18px; font-weight:700">Tool Usage</h3>
+        <div class="cards" id="tool-usage-cards"></div>
+        <div class="chart-grid" style="margin-top:16px">
+          <div class="chart-card"><h3>Tool Distribution</h3><div class="chart-container"><canvas id="chart-tool-usage"></canvas></div></div>
+        </div>
+        <div class="table-card" style="margin-top:16px">
+          <table id="tool-usage-table">
+            <thead><tr><th>Tool</th><th class="text-right">Count</th><th class="text-right">Percentage</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div id="tool-usage-help" class="insight-help" style="margin-top:8px"></div>
       </div>
     </div>
   </div>
@@ -1436,6 +1463,7 @@ async function loadProjects() {
     const data = await api('projects');
     state.projects = data;
     renderProjects(data);
+    loadBranchCosts();
   } catch (err) { document.getElementById('projects-loading').innerHTML = '<div>Error: ' + err.message + '</div>'; }
 }
 
@@ -1473,6 +1501,7 @@ async function loadPatterns() {
     const data = await api('patterns');
     state.patterns = data;
     renderPatterns(data);
+    loadToolUsage();
   } catch (err) { document.getElementById('patterns-loading').innerHTML = '<div>Error: ' + err.message + '</div>'; }
 }
 
@@ -1534,6 +1563,103 @@ function renderPatterns(data) {
         scales: { y: { beginAtZero: true, position: 'left', grid: { color: 'rgba(255,255,255,0.04)' } }, y1: { beginAtZero: true, position: 'right', grid: { display: false } }, x: { grid: { display: false } } }
       }
     });
+  }
+}
+
+// ========== TOOL USAGE ==========
+async function loadToolUsage() {
+  try {
+    const data = await api('tool-usage');
+    state.toolUsage = data;
+    renderToolUsage(data);
+  } catch {}
+}
+
+function renderToolUsage(data) {
+  if (!data || data.totalToolCalls === 0) return;
+  const section = document.getElementById('tool-usage-section');
+  section.style.display = 'block';
+
+  // Summary cards
+  const cards = document.getElementById('tool-usage-cards');
+  cards.innerHTML = `
+    <div class="card"><div class="card-label">Total Tool Calls</div><div class="card-value tools">${fmt(data.totalToolCalls)}</div></div>
+    <div class="card"><div class="card-label">Avg/Session</div><div class="card-value messages">${data.avgToolsPerSession}</div></div>
+    <div class="card"><div class="card-label">Read:Write Ratio</div><div class="card-value sessions">${data.readWriteRatio === Infinity ? '\u221e' : data.readWriteRatio + ':1'}</div></div>
+  `;
+
+  // Doughnut chart of top 8 tools
+  const top8 = data.topTools.slice(0, 8);
+  const colors = ['#a78bfa', '#34d399', '#f472b6', '#fb923c', '#38bdf8', '#fbbf24', '#818cf8', '#2dd4bf'];
+  const ctx = document.getElementById('chart-tool-usage').getContext('2d');
+  if (charts.toolUsage) charts.toolUsage.destroy();
+  charts.toolUsage = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: top8.map(t => t.name),
+      datasets: [{ data: top8.map(t => t.count), backgroundColor: colors.slice(0, top8.length), borderWidth: 0 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#9ca3af', font: { size: 11 } } } } }
+  });
+
+  // Table
+  document.querySelector('#tool-usage-table tbody').innerHTML = data.topTools.map(t => `
+    <tr><td class="mono">${esc(t.name)}</td><td class="text-right mono">${fmt(t.count)}</td><td class="text-right mono text-dim">${t.percentage}%</td></tr>
+  `).join('');
+
+  // Help text
+  if (data.helpText) {
+    const help = document.getElementById('tool-usage-help');
+    help.innerHTML = '<div class="insight-help-inner" style="padding:12px; font-size:12px; color:var(--text-dim); background:var(--glass); border:1px solid var(--glass-border); border-radius:8px">' + esc(data.helpText) + '</div>';
+  }
+}
+
+// ========== BRANCH COSTS ==========
+async function loadBranchCosts() {
+  try {
+    const data = await api('branch-costs');
+    state.branchCosts = data;
+    renderBranchCosts(data);
+  } catch {}
+}
+
+function renderBranchCosts(data) {
+  if (!data || !data.branches || data.branches.length === 0) return;
+  const section = document.getElementById('branch-costs-section');
+  section.style.display = 'block';
+
+  // Bar chart of top 10 branches
+  const top10 = data.branches.slice(0, 10);
+  const ctx = document.getElementById('chart-branch-costs').getContext('2d');
+  if (charts.branchCosts) charts.branchCosts.destroy();
+  charts.branchCosts = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: top10.map(b => b.branch.length > 30 ? b.branch.slice(0, 27) + '...' : b.branch),
+      datasets: [{ label: 'Estimated Cost', data: top10.map(b => b.cost), backgroundColor: 'rgba(52, 211, 153, 0.4)', borderColor: '#34d399', borderWidth: 1, borderRadius: 4 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => fmtCost(ctx.parsed.x) } } },
+      scales: { x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { callback: v => fmtCost(v) } }, y: { grid: { display: false } } }
+    }
+  });
+
+  // Table
+  document.querySelector('#branch-costs-table tbody').innerHTML = data.branches.map(b => `
+    <tr>
+      <td class="mono" title="${esc(b.branch)}">${esc(b.branch.length > 40 ? b.branch.slice(0, 37) + '...' : b.branch)}</td>
+      <td class="text-right mono">${fmt(b.sessions)}</td>
+      <td class="text-right mono">${fmt(b.messages)}</td>
+      <td class="text-right mono text-accent">${fmtCost(b.cost)}</td>
+      <td class="text-right mono text-dim">${fmtCost(b.avgCostPerSession)}</td>
+    </tr>
+  `).join('');
+
+  // Help text
+  if (data.helpText) {
+    const help = document.getElementById('branch-costs-help');
+    help.innerHTML = '<div class="insight-help-inner" style="padding:12px; font-size:12px; color:var(--text-dim); background:var(--glass); border:1px solid var(--glass-border); border-radius:8px">' + esc(data.helpText) + '</div>';
   }
 }
 

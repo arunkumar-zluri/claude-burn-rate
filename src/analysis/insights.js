@@ -18,6 +18,8 @@ function generateInsights(overview, sessions, config) {
   costPerMessage(insights, overview, sessions);
   shortVsLongSessions(insights, sessions);
   weekendWarrior(insights, overview);
+  costForecast(insights, overview);
+  sessionDurationDistribution(insights, sessions);
 
   return insights;
 }
@@ -496,6 +498,105 @@ function weekendWarrior(insights, overview) {
       helpText: 'This tracks what percentage of your sessions happen between 11 PM and 5 AM (your local time). Late-night coding sessions tend to be more exploratory and can run longer, which increases costs. This is purely informational — it helps you understand your usage patterns and whether late-night work is a significant part of your workflow.'
     });
   }
+}
+
+// Cost forecast based on recent daily spend
+function costForecast(insights, overview) {
+  const dc = overview.dailyCosts;
+  if (!dc || dc.length < 3) return;
+
+  // Last 7 days
+  const last7 = dc.slice(-7);
+  const avg7 = last7.reduce((s, d) => s + d.cost, 0) / last7.length;
+
+  // Last 30 days (or all available)
+  const last30 = dc.slice(-30);
+  const avg30 = last30.reduce((s, d) => s + d.cost, 0) / last30.length;
+
+  // Weighted daily average: emphasize recent week
+  const dailyAvg = (avg7 * 2 + avg30) / 3;
+  const weeklyEstimate = dailyAvg * 7;
+  const monthlyEstimate = dailyAvg * 30;
+
+  // Trend: compare last 7-day avg vs previous 7-day avg
+  let trend = 'stable';
+  if (dc.length >= 14) {
+    const prev7 = dc.slice(-14, -7);
+    const avgPrev7 = prev7.reduce((s, d) => s + d.cost, 0) / prev7.length;
+    if (avgPrev7 > 0) {
+      const change = (avg7 - avgPrev7) / avgPrev7;
+      if (change > 0.1) trend = 'increasing';
+      else if (change < -0.1) trend = 'decreasing';
+    }
+  }
+
+  // Confidence based on data days
+  const confidence = dc.length >= 14 ? 'high' : dc.length >= 7 ? 'medium' : 'low';
+  const severity = trend === 'increasing' ? 'warning' : 'info';
+
+  const trendLabel = trend === 'increasing' ? 'trending up' : trend === 'decreasing' ? 'trending down' : 'stable';
+
+  insights.push({
+    severity,
+    title: `Projected spend: ${formatCost(weeklyEstimate)}/week, ${formatCost(monthlyEstimate)}/month`,
+    description: `Based on your recent daily average of ${formatCost(dailyAvg)}/day. Your spend is ${trendLabel}. Confidence: ${confidence} (${dc.length} days of data).`,
+    detail: `Daily avg (last 7 days): ${formatCost(avg7)}\nDaily avg (last 30 days): ${formatCost(avg30)}\nWeighted daily avg: ${formatCost(dailyAvg)}\nWeekly estimate: ${formatCost(weeklyEstimate)}\nMonthly estimate: ${formatCost(monthlyEstimate)}\nTrend: ${trendLabel}\nConfidence: ${confidence}`,
+    helpText: 'This projects your future spend based on recent usage velocity. The weekly estimate uses your last 7 days of daily costs. The monthly estimate uses a weighted average emphasizing the most recent week. To reduce projected costs: use Sonnet (claude --model sonnet) for simple tasks, keep sessions longer to improve cache reuse, use /compact in long conversations, and start new sessions when switching topics rather than continuing an expensive one.'
+  });
+}
+
+// Session duration distribution analysis
+function sessionDurationDistribution(insights, sessions) {
+  if (!sessions || sessions.length < 5) return;
+
+  const buckets = [
+    { label: '<5min', min: 0, max: 5 * 60000, count: 0, totalCost: 0 },
+    { label: '5-15min', min: 5 * 60000, max: 15 * 60000, count: 0, totalCost: 0 },
+    { label: '15-30min', min: 15 * 60000, max: 30 * 60000, count: 0, totalCost: 0 },
+    { label: '30-60min', min: 30 * 60000, max: 60 * 60000, count: 0, totalCost: 0 },
+    { label: '1-2hr', min: 60 * 60000, max: 120 * 60000, count: 0, totalCost: 0 },
+    { label: '2hr+', min: 120 * 60000, max: Infinity, count: 0, totalCost: 0 }
+  ];
+
+  let counted = 0;
+  for (const s of sessions) {
+    if (!s.duration || s.duration <= 0) continue;
+    counted++;
+    for (const b of buckets) {
+      if (s.duration >= b.min && s.duration < b.max) {
+        b.count++;
+        b.totalCost += s.cost || 0;
+        break;
+      }
+    }
+  }
+
+  if (counted < 5) return;
+
+  const activeBuckets = buckets.filter(b => b.count > 0);
+  if (activeBuckets.length === 0) return;
+
+  // Most common bucket
+  const mostCommon = activeBuckets.reduce((a, b) => b.count > a.count ? b : a);
+
+  // Most cost-effective bucket (lowest avg cost per session, min 2 sessions)
+  const costEffective = activeBuckets
+    .filter(b => b.count >= 2)
+    .map(b => ({ ...b, avgCost: b.totalCost / b.count }))
+    .sort((a, b) => a.avgCost - b.avgCost)[0];
+
+  const detail = activeBuckets.map(b => {
+    const avgCost = b.count > 0 ? formatCost(b.totalCost / b.count) : '$0.00';
+    return `${b.label.padEnd(10)} ${b.count.toString().padStart(4)} sessions  avg ${avgCost}`;
+  }).join('\n');
+
+  insights.push({
+    severity: 'info',
+    title: `Most sessions last ${mostCommon.label} (${mostCommon.count} of ${counted})`,
+    description: `${costEffective ? `The most cost-effective duration is ${costEffective.label} at ${formatCost(costEffective.avgCost)}/session avg. ` : ''}Sessions are distributed across ${activeBuckets.length} duration ranges.`,
+    detail,
+    helpText: 'Sessions under 5 minutes have disproportionate cache warm-up costs — most of the spend goes to context creation that never gets reused. Sessions over 2 hours have escalating per-message costs due to growing context. The sweet spot is 15-60 minutes. Start new sessions when switching tasks. Use /continue to resume sessions instead of starting fresh.'
+  });
 }
 
 module.exports = { generateInsights };
