@@ -44,10 +44,11 @@ async function handleApi(pathname, req, res) {
 
     if (pathname === '/api/insights') {
       const { generateInsights } = require('../analysis/insights.js');
+      const { readClaudeConfig } = require('../data/config-reader.js');
       const overview = await getOverview(filters);
       const { getSessions } = require('../analysis/sessions.js');
-      const sessions = await getSessions(filters);
-      const data = generateInsights(overview, sessions);
+      const [sessions, config] = await Promise.all([getSessions(filters), readClaudeConfig()]);
+      const data = generateInsights(overview, sessions, config);
       return json(res, data);
     }
 

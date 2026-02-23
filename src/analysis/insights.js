@@ -1,9 +1,10 @@
 const { formatCost, formatTokens, getPricing, calculateCost } = require('../cost/pricing.js');
 
-function generateInsights(overview, sessions) {
+function generateInsights(overview, sessions, config) {
   const insights = [];
   if (!overview || overview.empty) return insights;
 
+  claudeSetupOverview(insights, config);
   costBreakdownByCategory(insights, overview);
   cacheSavings(insights, overview);
   costConcentration(insights, sessions);
@@ -19,6 +20,79 @@ function generateInsights(overview, sessions) {
   weekendWarrior(insights, overview);
 
   return insights;
+}
+
+// "Your Claude Code setup: N MCP servers, N commands, N plugins, N hooks"
+function claudeSetupOverview(insights, config) {
+  if (!config) return;
+
+  const parts = [];
+  const detailLines = [];
+
+  // MCP Servers
+  if (config.mcpServers.total > 0) {
+    parts.push(`${config.mcpServers.total} MCP server${config.mcpServers.total !== 1 ? 's' : ''}`);
+    detailLines.push(`MCP Servers (${config.mcpServers.total}):`);
+    for (const name of config.mcpServers.names) {
+      detailLines.push(`  \u2022 ${name}`);
+    }
+  } else {
+    parts.push('0 MCP servers');
+    detailLines.push('MCP Servers: None configured');
+  }
+
+  // Plugins (Agents)
+  if (config.plugins.total > 0) {
+    parts.push(`${config.plugins.enabled} active plugin${config.plugins.enabled !== 1 ? 's' : ''}`);
+    detailLines.push('');
+    detailLines.push(`Plugins (${config.plugins.enabled} active of ${config.plugins.total}):`);
+    for (const name of config.plugins.names) {
+      detailLines.push(`  \u2022 ${name}`);
+    }
+  } else {
+    parts.push('0 plugins');
+    detailLines.push('');
+    detailLines.push('Plugins: None installed');
+  }
+
+  // Custom Commands
+  if (config.commands.total > 0) {
+    parts.push(`${config.commands.total} custom command${config.commands.total !== 1 ? 's' : ''}`);
+    detailLines.push('');
+    detailLines.push(`Custom Commands (${config.commands.total}):`);
+    for (const name of config.commands.names) {
+      detailLines.push(`  \u2022 /${name}`);
+    }
+  } else {
+    parts.push('0 commands');
+    detailLines.push('');
+    detailLines.push('Custom Commands: None (add .md files to ~/.claude/commands/)');
+  }
+
+  // Hooks
+  if (config.hooks.total > 0) {
+    const hookLabel = `${config.hooks.total} hook${config.hooks.total !== 1 ? 's' : ''} across ${config.hooks.events.length} event${config.hooks.events.length !== 1 ? 's' : ''}`;
+    parts.push(hookLabel);
+    detailLines.push('');
+    detailLines.push(`Hooks (${config.hooks.total}):`);
+    for (const { event, count } of config.hooks.events) {
+      detailLines.push(`  \u2022 ${event}: ${count} hook${count !== 1 ? 's' : ''}`);
+    }
+  } else {
+    parts.push('0 hooks');
+    detailLines.push('');
+    detailLines.push('Hooks: None configured (add hooks in ~/.claude/settings.json)');
+  }
+
+  const activeCount = config.mcpServers.total + config.plugins.enabled + config.commands.total + config.hooks.total;
+
+  insights.push({
+    severity: 'info',
+    title: `Your setup: ${parts.join(', ')}`,
+    description: `You have ${activeCount} active configuration${activeCount !== 1 ? 's' : ''} across MCP servers, plugins, custom commands, and hooks. ${config.mcpServers.total === 0 && config.hooks.total === 0 ? 'Adding MCP servers or hooks could extend Claude\'s capabilities.' : 'Your environment is well-configured.'}`,
+    detail: detailLines.join('\n'),
+    helpText: 'This shows your Claude Code environment configuration. MCP servers extend Claude with external tools (databases, APIs, search). Plugins add specialized agents and commands. Custom commands (*.md files in ~/.claude/commands/) create reusable slash commands. Hooks let you run shell commands automatically on events like pre-commit or tool calls.'
+  });
 }
 
 // "Cache writes are your biggest cost driver at $X"
