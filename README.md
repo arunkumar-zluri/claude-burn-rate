@@ -18,7 +18,7 @@ If you use Claude Code daily, costs add up fast. But there's no built-in way to 
 **claude-burn-rate** answers all of that — in seconds — using data Claude Code already stores locally.
 
 <p align="center">
-  <img src="docs/screenshots/overview.png" alt="Dashboard overview showing cost summary, daily activity chart, and key insights" width="100%"/>
+  <img src="https://raw.githubusercontent.com/arunkumargit/claude-burn-rate/main/docs/screenshots/overview.png" alt="Dashboard overview showing cost summary, daily activity chart, and key insights" width="100%"/>
 </p>
 
 ---
@@ -53,7 +53,7 @@ Searchable, sortable table of every session — date, project, summary, message 
 Per-project cost and usage breakdown with bar charts and a leaderboard.
 
 <p align="center">
-  <img src="docs/screenshots/projects.png" alt="Projects tab with cost breakdown bar chart and leaderboard table" width="100%"/>
+  <img src="https://raw.githubusercontent.com/arunkumargit/claude-burn-rate/main/docs/screenshots/projects.png" alt="Projects tab with cost breakdown bar chart and leaderboard table" width="100%"/>
 </p>
 
 ### Patterns
@@ -66,7 +66,7 @@ Finds your costliest individual prompts across all sessions. Per-prompt cost, fu
 Analysis of your usage patterns — cache efficiency, model selection, cost concentration, and actionable recommendations. Includes an **efficiency score**, **achievement badges** (First $100, Cache Master, Night Owl, and more), and **usage streaks**.
 
 <p align="center">
-  <img src="docs/screenshots/insights.png" alt="Personalized insights with efficiency score, achievements, and recommendations" width="100%"/>
+  <img src="https://raw.githubusercontent.com/arunkumargit/claude-burn-rate/main/docs/screenshots/insights.png" alt="Personalized insights with efficiency score, achievements, and recommendations" width="100%"/>
 </p>
 
 ### Contributions
@@ -82,7 +82,7 @@ A complete audit of everything Claude accessed during your sessions:
 Sensitive path detection covers `.env`, `.ssh/`, `.aws/`, `.gnupg/`, credential files, `.pem`/`.key` files, and system directories.
 
 <p align="center">
-  <img src="docs/screenshots/security.png" alt="Security audit with file access log, bash commands, and sensitive path detection" width="100%"/>
+  <img src="https://raw.githubusercontent.com/arunkumargit/claude-burn-rate/main/docs/screenshots/security.png" alt="Security audit with file access log, bash commands, and sensitive path detection" width="100%"/>
 </p>
 
 ---
