@@ -1,0 +1,182 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f0a2a"/>
+      <stop offset="100%" stop-color="#0a0a1a"/>
+    </linearGradient>
+    <linearGradient id="grad1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#a78bfa"/>
+      <stop offset="100%" stop-color="#f472b6"/>
+    </linearGradient>
+    <linearGradient id="grad2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#34d399"/>
+      <stop offset="100%" stop-color="#38bdf8"/>
+    </linearGradient>
+    <linearGradient id="grad3" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fb923c"/>
+      <stop offset="100%" stop-color="#f472b6"/>
+    </linearGradient>
+    <linearGradient id="grad4" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#a78bfa"/>
+    </linearGradient>
+    <linearGradient id="chartLine" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#a78bfa"/>
+      <stop offset="100%" stop-color="#f472b6"/>
+    </linearGradient>
+    <linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="rgba(167,139,250,0.3)"/>
+      <stop offset="100%" stop-color="rgba(167,139,250,0.02)"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="rgba(0,0,0,0.3)"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="720" fill="url(#bg)"/>
+  <ellipse cx="600" cy="0" rx="700" ry="300" fill="rgba(120,80,255,0.08)"/>
+  <ellipse cx="900" cy="720" rx="500" ry="250" fill="rgba(244,114,182,0.04)"/>
+
+  <!-- Header -->
+  <rect x="30" y="20" width="36" height="36" rx="10" fill="url(#grad1)" filter="url(#shadow)"/>
+  <text x="48" y="44" text-anchor="middle" fill="#fff" font-size="16" font-weight="800">$</text>
+  <text x="78" y="45" fill="#f0f0ff" font-size="22" font-weight="800" letter-spacing="-0.5">claude-burn-rate</text>
+  <text x="1170" y="35" text-anchor="end" fill="#9ca3af" font-size="12">142 sessions analyzed</text>
+  <text x="1170" y="52" text-anchor="end" fill="#6b7280" font-size="11">Jan 5 – Feb 23, 2026</text>
+
+  <!-- Header separator -->
+  <line x1="30" y1="68" x2="1170" y2="68" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+  <line x1="30" y1="68" x2="1170" y2="68" stroke="url(#grad1)" stroke-width="1" opacity="0.3"/>
+
+  <!-- Tab bar -->
+  <rect x="30" y="82" width="1140" height="42" rx="14" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+  <rect x="35" y="87" width="90" height="32" rx="10" fill="url(#grad1)"/>
+  <text x="80" y="108" text-anchor="middle" fill="#fff" font-size="12" font-weight="600">Overview</text>
+  <text x="170" y="108" fill="#9ca3af" font-size="12" font-weight="600">Sessions</text>
+  <text x="250" y="108" fill="#9ca3af" font-size="12" font-weight="600">Projects</text>
+  <text x="330" y="108" fill="#9ca3af" font-size="12" font-weight="600">Patterns</text>
+  <text x="440" y="108" fill="#9ca3af" font-size="12" font-weight="600">Expensive Prompts</text>
+  <text x="570" y="108" fill="#9ca3af" font-size="12" font-weight="600">Insights</text>
+  <text x="665" y="108" fill="#9ca3af" font-size="12" font-weight="600">Contributions</text>
+  <text x="770" y="108" fill="#9ca3af" font-size="12" font-weight="600">Security</text>
+
+  <!-- Summary Cards Row -->
+  <!-- Card 1: Total Cost -->
+  <rect x="30" y="140" width="270" height="110" rx="16" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+  <circle cx="56" cy="168" r="14" fill="rgba(167,139,250,0.15)"/>
+  <text x="56" y="173" text-anchor="middle" fill="#a78bfa" font-size="14">$</text>
+  <text x="78" y="172" fill="#9ca3af" font-size="11" font-weight="600" text-transform="uppercase" letter-spacing="1">TOTAL COST</text>
+  <text x="50" y="218" fill="#f0f0ff" font-size="32" font-weight="800">$347.82</text>
+
+  <!-- Card 2: Sessions -->
+  <rect x="320" y="140" width="270" height="110" rx="16" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+  <circle cx="346" cy="168" r="14" fill="rgba(52,211,153,0.15)"/>
+  <text x="346" y="173" text-anchor="middle" fill="#34d399" font-size="13">⚡</text>
+  <text x="368" y="172" fill="#9ca3af" font-size="11" font-weight="600" letter-spacing="1">SESSIONS</text>
+  <text x="340" y="218" fill="#f0f0ff" font-size="32" font-weight="800">142</text>
+
+  <!-- Card 3: Messages -->
+  <rect x="610" y="140" width="270" height="110" rx="16" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+  <circle cx="636" cy="168" r="14" fill="rgba(244,114,182,0.15)"/>
+  <text x="636" y="173" text-anchor="middle" fill="#f472b6" font-size="13">✉</text>
+  <text x="658" y="172" fill="#9ca3af" font-size="11" font-weight="600" letter-spacing="1">MESSAGES</text>
+  <text x="630" y="218" fill="#f0f0ff" font-size="32" font-weight="800">3,847</text>
+
+  <!-- Card 4: Tool Calls -->
+  <rect x="900" y="140" width="270" height="110" rx="16" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+  <circle cx="926" cy="168" r="14" fill="rgba(56,189,248,0.15)"/>
+  <text x="926" y="173" text-anchor="middle" fill="#38bdf8" font-size="13">⚙</text>
+  <text x="948" y="172" fill="#9ca3af" font-size="11" font-weight="600" letter-spacing="1">TOOL CALLS</text>
+  <text x="920" y="218" fill="#f0f0ff" font-size="32" font-weight="800">12,531</text>
+
+  <!-- Daily Activity Chart -->
+  <rect x="30" y="270" width="740" height="280" rx="16" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+  <text x="54" y="302" fill="#f0f0ff" font-size="15" font-weight="700">Daily Activity</text>
+  <text x="54" y="320" fill="#6b7280" font-size="11">Cost per day over the last 30 days</text>
+
+  <!-- Y-axis labels -->
+  <text x="62" y="352" fill="#6b7280" font-size="10" text-anchor="end">$25</text>
+  <text x="62" y="392" fill="#6b7280" font-size="10" text-anchor="end">$20</text>
+  <text x="62" y="432" fill="#6b7280" font-size="10" text-anchor="end">$15</text>
+  <text x="62" y="472" fill="#6b7280" font-size="10" text-anchor="end">$10</text>
+  <text x="62" y="512" fill="#6b7280" font-size="10" text-anchor="end">$5</text>
+  <text x="62" y="535" fill="#6b7280" font-size="10" text-anchor="end">$0</text>
+
+  <!-- Grid lines -->
+  <line x1="70" y1="348" x2="740" y2="348" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+  <line x1="70" y1="388" x2="740" y2="388" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+  <line x1="70" y1="428" x2="740" y2="428" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+  <line x1="70" y1="468" x2="740" y2="468" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+  <line x1="70" y1="508" x2="740" y2="508" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+
+  <!-- Chart area fill -->
+  <polygon points="80,535 102,510 124,498 146,505 168,480 190,470 212,490 234,468 256,475 278,460 300,442 322,455 344,430 366,420 388,435 410,412 432,398 454,415 476,395 498,408 520,385 542,375 564,390 586,370 608,358 630,380 652,365 674,350 696,360 718,340 718,535" fill="url(#chartFill)"/>
+
+  <!-- Chart line -->
+  <polyline points="80,510 102,498 124,505 146,480 168,470 190,490 212,468 234,475 256,460 278,442 300,455 322,430 344,420 366,435 388,412 410,398 432,415 454,395 476,408 498,385 520,375 542,390 564,370 586,358 608,380 630,365 652,350 674,360 696,340 718,335" fill="none" stroke="url(#chartLine)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Chart dots on peaks -->
+  <circle cx="718" cy="335" r="4" fill="#f472b6" filter="url(#glow)"/>
+  <circle cx="674" cy="350" r="3" fill="#a78bfa"/>
+  <circle cx="586" cy="358" r="3" fill="#a78bfa"/>
+
+  <!-- X-axis labels -->
+  <text x="102" y="535" fill="#6b7280" font-size="9" text-anchor="middle">Jan 25</text>
+  <text x="256" y="535" fill="#6b7280" font-size="9" text-anchor="middle">Feb 1</text>
+  <text x="410" y="535" fill="#6b7280" font-size="9" text-anchor="middle">Feb 8</text>
+  <text x="564" y="535" fill="#6b7280" font-size="9" text-anchor="middle">Feb 15</text>
+  <text x="718" y="535" fill="#6b7280" font-size="9" text-anchor="middle">Feb 22</text>
+
+  <!-- Cost by Model (right panel) -->
+  <rect x="790" y="270" width="380" height="280" rx="16" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+  <text x="814" y="302" fill="#f0f0ff" font-size="15" font-weight="700">Cost by Model</text>
+
+  <!-- Model bars -->
+  <!-- Opus 4.6 -->
+  <text x="814" y="340" fill="#e0e0f0" font-size="12" font-weight="500">Claude Opus 4.6</text>
+  <text x="1146" y="340" text-anchor="end" fill="#a78bfa" font-size="12" font-weight="700">$198.40</text>
+  <rect x="814" y="348" width="356" height="10" rx="5" fill="rgba(255,255,255,0.06)"/>
+  <rect x="814" y="348" width="245" height="10" rx="5" fill="url(#grad1)"/>
+
+  <!-- Sonnet 4.6 -->
+  <text x="814" y="388" fill="#e0e0f0" font-size="12" font-weight="500">Claude Sonnet 4.6</text>
+  <text x="1146" y="388" text-anchor="end" fill="#34d399" font-size="12" font-weight="700">$112.75</text>
+  <rect x="814" y="396" width="356" height="10" rx="5" fill="rgba(255,255,255,0.06)"/>
+  <rect x="814" y="396" width="140" height="10" rx="5" fill="url(#grad2)"/>
+
+  <!-- Haiku 4.5 -->
+  <text x="814" y="436" fill="#e0e0f0" font-size="12" font-weight="500">Claude Haiku 4.5</text>
+  <text x="1146" y="436" text-anchor="end" fill="#fb923c" font-size="12" font-weight="700">$28.42</text>
+  <rect x="814" y="444" width="356" height="10" rx="5" fill="rgba(255,255,255,0.06)"/>
+  <rect x="814" y="444" width="35" height="10" rx="5" fill="url(#grad3)"/>
+
+  <!-- Sonnet 4.5 -->
+  <text x="814" y="484" fill="#e0e0f0" font-size="12" font-weight="500">Claude Sonnet 4.5</text>
+  <text x="1146" y="484" text-anchor="end" fill="#38bdf8" font-size="12" font-weight="700">$8.25</text>
+  <rect x="814" y="492" width="356" height="10" rx="5" fill="rgba(255,255,255,0.06)"/>
+  <rect x="814" y="492" width="10" height="10" rx="5" fill="url(#grad4)"/>
+
+  <!-- Insights row -->
+  <rect x="30" y="570" width="370" height="130" rx="16" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+  <text x="54" y="598" fill="#a78bfa" font-size="11" font-weight="700" letter-spacing="0.5">💡 INSIGHT</text>
+  <text x="54" y="618" fill="#e0e0f0" font-size="12" font-weight="600">Cache is saving you ~$142/month</text>
+  <text x="54" y="638" fill="#9ca3af" font-size="11">Your 87% cache hit rate avoids re-processing</text>
+  <text x="54" y="654" fill="#9ca3af" font-size="11">tokens you've already sent.</text>
+
+  <rect x="415" y="570" width="370" height="130" rx="16" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+  <text x="439" y="598" fill="#34d399" font-size="11" font-weight="700" letter-spacing="0.5">📊 PATTERN</text>
+  <text x="439" y="618" fill="#e0e0f0" font-size="12" font-weight="600">Peak usage: Tue–Thu, 2–5 PM</text>
+  <text x="439" y="638" fill="#9ca3af" font-size="11">65% of your spend happens during these</text>
+  <text x="439" y="654" fill="#9ca3af" font-size="11">windows. Consider batching for off-peak.</text>
+
+  <rect x="800" y="570" width="370" height="130" rx="16" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+  <text x="824" y="598" fill="#fb923c" font-size="11" font-weight="700" letter-spacing="0.5">⚡ EFFICIENCY</text>
+  <text x="824" y="618" fill="#e0e0f0" font-size="12" font-weight="600">23% of sessions cost under $0.10</text>
+  <text x="824" y="638" fill="#9ca3af" font-size="11">Short exploration sessions are cost-effective.</text>
+  <text x="824" y="654" fill="#9ca3af" font-size="11">Use Sonnet for quick lookups to save more.</text>
+</svg>
