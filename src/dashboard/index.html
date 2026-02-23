@@ -682,6 +682,61 @@ tr { transition: background 0.15s; }
 }
 tr.sensitive-row td { background: rgba(248, 113, 113, 0.04); }
 tr.sensitive-row:hover td { background: rgba(248, 113, 113, 0.08); }
+
+/* Security: Risk badges */
+.risk-badge {
+  display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 10px;
+  border-radius: 6px; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.risk-badge.high { background: rgba(248, 113, 113, 0.15); color: var(--danger); }
+.risk-badge.medium { background: rgba(251, 191, 36, 0.15); color: var(--warning); }
+.risk-badge.low { background: rgba(52, 211, 153, 0.15); color: var(--success); }
+
+/* Security: Permission pills */
+.perm-pill {
+  display: inline-block; font-size: 11px; font-weight: 600; padding: 3px 10px;
+  border-radius: 8px; background: var(--surface2); color: var(--text-dim);
+  font-family: var(--mono); margin: 2px 4px 2px 0;
+}
+.perm-group-label {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1px; color: var(--text-dim); margin: 12px 0 6px;
+}
+.perm-group-label:first-child { margin-top: 0; }
+
+/* Security: Danger alert banner */
+.danger-alert {
+  background: rgba(248, 113, 113, 0.08); border: 1px solid rgba(248, 113, 113, 0.25);
+  border-radius: var(--card-radius); padding: 16px 20px; margin-bottom: 24px;
+  border-left: 4px solid var(--danger);
+}
+.danger-alert h4 { color: var(--danger); font-size: 14px; margin-bottom: 8px; }
+.danger-alert-item {
+  display: flex; align-items: center; gap: 12px; padding: 6px 0;
+  font-size: 12px; color: var(--text-dim);
+}
+.danger-alert-item .mono { color: var(--text); }
+
+/* Security: Anomaly flags */
+.anomaly-flag {
+  display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 8px;
+  border-radius: 6px; background: rgba(251, 191, 36, 0.12); color: var(--warning);
+  margin: 2px 4px 2px 0;
+}
+
+/* Security: Sudo category */
+.bash-category.cat-sudo { border-left: 3px solid #ef4444; }
+
+/* Security: Secret warning */
+.secret-type-tag {
+  display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 8px;
+  border-radius: 6px; background: rgba(248, 113, 113, 0.12); color: var(--danger);
+  margin: 1px 3px;
+}
+
+/* Security: env secret preview */
+.env-secret-name { color: var(--warning); font-family: var(--mono); font-size: 12px; }
+.env-secret-preview { color: var(--text-dimmer); font-family: var(--mono); font-size: 11px; }
 </style>
 </head>
 <body>
@@ -1650,15 +1705,81 @@ function renderSecurity(data) {
 
   const s = data.summary;
 
-  // Summary cards
+  // Summary cards (expanded with new metrics)
   let html = `<div class="cards">
     <div class="card"><div class="card-label">Files Accessed</div><div class="card-value sessions">${fmt(s.totalFilesAccessed)}</div><div class="card-sub">Unique file paths</div></div>
     <div class="card"><div class="card-label">Bash Commands</div><div class="card-value tools">${fmt(s.totalBashCommands)}</div><div class="card-sub">${s.flaggedBashCommands} flagged</div></div>
-    <div class="card"><div class="card-label">Directories Reached</div><div class="card-value messages">${fmt(s.totalDirectories)}</div><div class="card-sub">Unique directories</div></div>
-    <div class="card"><div class="card-label">Sensitive Flags</div><div class="card-value cost">${fmt(s.sensitiveFlags)}</div><div class="card-sub">Sensitive paths accessed</div></div>
+    <div class="card"><div class="card-label">Dangerous Sessions</div><div class="card-value cost">${fmt(s.dangerousSessionCount)}</div><div class="card-sub">Non-default permission mode</div></div>
+    <div class="card"><div class="card-label">Secrets in Bash</div><div class="card-value cost">${fmt(s.secretsInBashCount)}</div><div class="card-sub">Commands with secrets</div></div>
   </div>`;
 
-  // File access table
+  // Feature 3: Dangerous Sessions Alert
+  const dangerousEntries = Object.entries(data.dangerousSessions || {});
+  if (dangerousEntries.length > 0) {
+    html += `<div class="danger-alert">
+      <h4>Dangerous Sessions Detected</h4>
+      <p style="font-size:12px;color:var(--text-dim);margin-bottom:10px">${dangerousEntries.length} session(s) ran with non-default permission modes, bypassing safety confirmations.</p>
+      ${dangerousEntries.slice(0, 20).map(([sid, info]) => `<div class="danger-alert-item">
+        <span class="risk-badge high">${esc(info.mode)}</span>
+        <span class="mono">${esc(sid.slice(0, 12))}...</span>
+        <span>${info.projectPath ? esc(info.projectPath) : 'unknown project'}</span>
+        <span>${info.date ? new Date(info.date).toLocaleDateString() : ''}</span>
+      </div>`).join('')}
+      ${dangerousEntries.length > 20 ? `<p style="font-size:11px;color:var(--text-dimmer);margin-top:8px">... and ${dangerousEntries.length - 20} more</p>` : ''}
+    </div>`;
+  }
+
+  // Feature 1: Permission Settings Audit
+  const perms = data.permissionSettings || { global: { allow: [] }, projects: [] };
+  const hasPerms = perms.global.allow.length > 0 || perms.projects.length > 0;
+  if (hasPerms) {
+    html += `<div class="security-section"><div class="table-card">
+      <h3>Permission Settings Audit</h3>`;
+    if (perms.global.allow.length > 0) {
+      html += `<div class="perm-group-label">Global Allowed Tools</div>
+        <div>${perms.global.allow.map(t => `<span class="perm-pill">${esc(t)}</span>`).join('')}</div>`;
+    }
+    for (const proj of perms.projects) {
+      html += `<div class="perm-group-label">${esc(proj.projectPath)}</div>
+        <div>${proj.allow.map(t => `<span class="perm-pill">${esc(t)}</span>`).join('')}</div>`;
+    }
+    html += `</div></div>`;
+  }
+
+  // Feature 2: MCP Server Risk Assessment
+  const mcpRisks = data.mcpRiskAssessments || [];
+  if (mcpRisks.length > 0) {
+    html += `<div class="security-section"><div class="table-card">
+      <h3>MCP Server Risk Assessment</h3>
+      <table>
+        <thead><tr><th>Server</th><th>Command</th><th>Risk</th><th>Exposed Env Vars</th></tr></thead>
+        <tbody>${mcpRisks.map(r => `<tr>
+          <td class="mono">${esc(r.name)}</td>
+          <td class="mono">${esc(r.command || 'N/A')}${r.unknownCommand ? ' <span class="risk-badge high">unknown</span>' : ''}</td>
+          <td><span class="risk-badge ${r.riskLevel}">${r.riskLevel}</span></td>
+          <td>${r.exposedSecrets.length > 0 ? r.exposedSecrets.map(s => `<span class="env-secret-name">${esc(s.name)}</span> <span class="env-secret-preview">${esc(s.preview)}</span>`).join(', ') : '<span class="text-dim">None</span>'}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div></div>`;
+  }
+
+  // Feature 4: Secrets in Bash Commands
+  if (data.secretsInBash && data.secretsInBash.length > 0) {
+    html += `<div class="security-section"><div class="table-card">
+      <h3>Secrets in Bash Commands</h3>
+      <table>
+        <thead><tr><th>Command</th><th>Detected Secrets</th><th>Date</th></tr></thead>
+        <tbody>${data.secretsInBash.slice(0, 50).map(s => `<tr class="sensitive-row">
+          <td class="mono">${esc(s.command.length > 120 ? s.command.slice(0, 120) + '...' : s.command)}</td>
+          <td>${s.secrets.map(t => `<span class="secret-type-tag">${esc(t)}</span>`).join(' ')}</td>
+          <td class="text-dim">${s.date ? new Date(s.date).toLocaleDateString() : ''}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+      ${data.secretsInBash.length > 50 ? `<p style="font-size:11px;color:var(--text-dimmer);padding:8px 16px">... and ${data.secretsInBash.length - 50} more</p>` : ''}
+    </div></div>`;
+  }
+
+  // File access table (existing)
   if (data.fileAccess.length > 0) {
     html += `<div class="security-section"><div class="table-card">
       <h3>File Access Audit</h3>
@@ -1683,8 +1804,9 @@ function renderSecurity(data) {
     </div></div>`;
   }
 
-  // Bash command log
+  // Bash command log (existing, extended with sudo)
   const catLabels = {
+    sudo: { label: 'Sudo / Elevated', icon: '\u{1F6E1}' },
     destructive: { label: 'Destructive', icon: '\u26a0\ufe0f' },
     permissions: { label: 'Permission Changes', icon: '\ud83d\udd12' },
     network: { label: 'Network / External', icon: '\ud83c\udf10' },
@@ -1696,7 +1818,7 @@ function renderSecurity(data) {
   for (const [cat, meta] of Object.entries(catLabels)) {
     const cmds = data.bashCommands[cat] || [];
     if (cmds.length === 0) continue;
-    const autoOpen = (cat === 'destructive' || cat === 'permissions') ? ' open' : '';
+    const autoOpen = (cat === 'destructive' || cat === 'permissions' || cat === 'sudo') ? ' open' : '';
     html += `<div class="bash-category cat-${cat}${autoOpen}">
       <div class="bash-category-header" onclick="this.parentElement.classList.toggle('open')">
         <div class="bash-category-title">${meta.icon} ${meta.label} <span class="bash-category-count">${cmds.length}</span></div>
@@ -1713,7 +1835,23 @@ function renderSecurity(data) {
   }
   html += `</div>`;
 
-  // Directory scope
+  // Feature 5: Outside-Project Writes
+  if (data.outsideProjectWrites && data.outsideProjectWrites.length > 0) {
+    html += `<div class="security-section"><div class="table-card">
+      <h3>Outside-Project Writes</h3>
+      <table>
+        <thead><tr><th>Path</th><th class="text-right">Writes</th><th class="text-right">Edits</th><th>Flag</th></tr></thead>
+        <tbody>${data.outsideProjectWrites.slice(0, 50).map(f => `<tr class="${f.sensitive ? 'sensitive-row' : ''}">
+          <td class="mono">${esc(f.path)}</td>
+          <td class="text-right mono">${f.writes}</td>
+          <td class="text-right mono">${f.edits}</td>
+          <td>${f.sensitive ? '<span class="sensitive-flag">SENSITIVE</span>' : ''}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div></div>`;
+  }
+
+  // Directory scope (existing)
   const scope = data.directoryScope;
   html += `<div class="security-section"><div class="table-card">
     <h3>Directory Scope Map</h3>`;
@@ -1739,6 +1877,23 @@ function renderSecurity(data) {
   }
 
   html += `</div></div>`;
+
+  // Feature 7: Tool Call Anomalies
+  if (data.anomalies && data.anomalies.length > 0) {
+    html += `<div class="security-section"><div class="table-card">
+      <h3>Tool Call Anomalies</h3>
+      <p style="font-size:11px;color:var(--text-dim);margin-bottom:12px">Sessions exceeding 3x the average destructive or write operation count.</p>
+      <table>
+        <thead><tr><th>Session</th><th>Project</th><th>Date</th><th>Flags</th></tr></thead>
+        <tbody>${data.anomalies.map(a => `<tr>
+          <td class="mono">${esc(a.sessionId.slice(0, 12))}...</td>
+          <td class="mono">${a.projectPath ? esc(a.projectPath) : ''}</td>
+          <td class="text-dim">${a.date ? new Date(a.date).toLocaleDateString() : ''}</td>
+          <td>${a.flags.map(f => `<span class="anomaly-flag">${esc(f)}</span>`).join(' ')}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div></div>`;
+  }
 
   container.innerHTML = html;
 

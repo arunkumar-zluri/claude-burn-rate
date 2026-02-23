@@ -7,6 +7,7 @@ async function parseSessionFile(filePath) {
   let sessionId = null;
   let projectPath = null;
   let gitBranch = null;
+  let permissionMode = null;
   let firstTimestamp = null;
   let lastTimestamp = null;
 
@@ -21,6 +22,7 @@ async function parseSessionFile(filePath) {
       if (!sessionId && obj.sessionId) sessionId = obj.sessionId;
       if (!projectPath && obj.cwd) projectPath = obj.cwd;
       if (!gitBranch && obj.gitBranch) gitBranch = obj.gitBranch;
+      if (!permissionMode && obj.permissionMode) permissionMode = obj.permissionMode;
 
       if (obj.timestamp) {
         const ts = new Date(obj.timestamp).getTime();
@@ -58,6 +60,7 @@ async function parseSessionFile(filePath) {
         messages.push({
           type: 'user',
           promptText,
+          permissionMode: obj.permissionMode || null,
           timestamp: obj.timestamp
         });
       }
@@ -70,6 +73,7 @@ async function parseSessionFile(filePath) {
     sessionId: sessionId || path.basename(filePath, '.jsonl'),
     projectPath,
     gitBranch,
+    permissionMode,
     firstTimestamp,
     lastTimestamp,
     duration: firstTimestamp && lastTimestamp ? lastTimestamp - firstTimestamp : 0,
