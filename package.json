@@ -21,12 +21,12 @@
   "author": "arunkumargit",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/arunkumargit/claude-burn-rate.git"
+    "url": "git+https://github.com/arunkumar-zluri/claude-burn-rate.git"
   },
   "bugs": {
-    "url": "https://github.com/arunkumargit/claude-burn-rate/issues"
+    "url": "https://github.com/arunkumar-zluri/claude-burn-rate/issues"
   },
-  "homepage": "https://github.com/arunkumargit/claude-burn-rate#readme",
+  "homepage": "https://github.com/arunkumar-zluri/claude-burn-rate#readme",
   "license": "MIT",
   "engines": {
     "node": ">=18.0.0"
