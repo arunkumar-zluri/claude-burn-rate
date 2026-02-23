@@ -52,6 +52,10 @@ Searchable, sortable table of every session — date, project, summary, message 
 ### Projects
 Per-project cost and usage breakdown with bar charts and a leaderboard.
 
+<p align="center">
+  <img src="docs/screenshots/projects.png" alt="Projects tab with cost breakdown bar chart and leaderboard table" width="100%"/>
+</p>
+
 ### Patterns
 Usage heatmap by hour of day, peak hours chart, and week-over-week comparisons. See when you're most productive (or most expensive).
 
@@ -60,6 +64,10 @@ Finds your costliest individual prompts across all sessions. Per-prompt cost, fu
 
 ### Personalized Insights
 Analysis of your usage patterns — cache efficiency, model selection, cost concentration, and actionable recommendations. Includes an **efficiency score**, **achievement badges** (First $100, Cache Master, Night Owl, and more), and **usage streaks**.
+
+<p align="center">
+  <img src="docs/screenshots/insights.png" alt="Personalized insights with efficiency score, achievements, and recommendations" width="100%"/>
+</p>
 
 ### Contributions
 Lines written, lines edited, files touched, and co-authored git commits. See which files Claude edits most.
@@ -72,6 +80,10 @@ A complete audit of everything Claude accessed during your sessions:
 - **Secret detection** — flags bearer tokens, API keys (OpenAI, AWS, GitHub, Atlassian), passwords, and credentials found in commands
 
 Sensitive path detection covers `.env`, `.ssh/`, `.aws/`, `.gnupg/`, credential files, `.pem`/`.key` files, and system directories.
+
+<p align="center">
+  <img src="docs/screenshots/security.png" alt="Security audit with file access log, bash commands, and sensitive path detection" width="100%"/>
+</p>
 
 ---
 
