@@ -17,10 +17,6 @@ If you use Claude Code daily, costs add up fast. But there's no built-in way to 
 
 **claude-burn-rate** answers all of that — in seconds — using data Claude Code already stores locally.
 
-<p align="center">
-  <img src="docs/screenshots/overview.svg" alt="Overview dashboard with cost summary, daily activity chart, and model breakdown" width="100%"/>
-</p>
-
 ---
 
 ## Quick Start
@@ -49,10 +45,6 @@ Summary cards for total cost, sessions, messages, and tool calls. Daily activity
 ### Sessions
 Searchable, sortable table of every session — date, project, summary, message count, estimated cost, and duration.
 
-<p align="center">
-  <img src="docs/screenshots/sessions.svg" alt="Sessions table with sortable columns" width="100%"/>
-</p>
-
 ### Projects
 Per-project cost and usage breakdown with bar charts and a leaderboard.
 
@@ -65,10 +57,6 @@ Finds your costliest individual prompts across all sessions. Per-prompt cost, fu
 ### Personalized Insights
 Analysis of your usage patterns — cache efficiency, model selection, cost concentration, and actionable recommendations. Includes an **efficiency score**, **achievement badges** (First $100, Cache Master, Night Owl, and more), and **usage streaks**.
 
-<p align="center">
-  <img src="docs/screenshots/insights.svg" alt="Efficiency score, achievement badges, and usage streaks" width="100%"/>
-</p>
-
 ### Contributions
 Lines written, lines edited, files touched, and co-authored git commits. See which files Claude edits most.
 
@@ -80,10 +68,6 @@ A complete audit of everything Claude accessed during your sessions:
 - **Secret detection** — flags bearer tokens, API keys (OpenAI, AWS, GitHub, Atlassian), passwords, and credentials found in commands
 
 Sensitive path detection covers `.env`, `.ssh/`, `.aws/`, `.gnupg/`, credential files, `.pem`/`.key` files, and system directories.
-
-<p align="center">
-  <img src="docs/screenshots/security.svg" alt="Security audit with bash command log and sensitive path detection" width="100%"/>
-</p>
 
 ---
 
