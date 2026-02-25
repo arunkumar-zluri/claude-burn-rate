@@ -4,7 +4,19 @@ const { formatCost, formatTokens } = require('../cost/pricing.js');
 
 async function printSummary() {
   const stats = await readStatsCache();
-  const overview = buildOverview(stats);
+
+  // Supplement stale cache with recent session data
+  let recentSessions = null;
+  if (stats && stats.lastComputedDate) {
+    const today = new Date().toISOString().split('T')[0];
+    if (stats.lastComputedDate < today) {
+      const { getSessions } = require('../analysis/sessions.js');
+      const allSessions = await getSessions();
+      recentSessions = allSessions.filter(s => s.date && s.date > stats.lastComputedDate);
+    }
+  }
+
+  const overview = buildOverview(stats, null, recentSessions && recentSessions.length > 0 ? recentSessions : null);
 
   if (overview.empty) {
     console.log(overview.error);

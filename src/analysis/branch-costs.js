@@ -6,12 +6,14 @@ async function getBranchCosts(filters) {
 
   for (const s of sessions) {
     const branch = s.gitBranch || '(no branch)';
-    if (!branchMap[branch]) {
-      branchMap[branch] = { branch, sessions: 0, messages: 0, cost: 0 };
+    const project = s.project || '(unknown)';
+    const key = project + '::' + branch;
+    if (!branchMap[key]) {
+      branchMap[key] = { branch, project, sessions: 0, messages: 0, cost: 0 };
     }
-    branchMap[branch].sessions++;
-    branchMap[branch].messages += s.messages || 0;
-    branchMap[branch].cost += s.cost || 0;
+    branchMap[key].sessions++;
+    branchMap[key].messages += s.messages || 0;
+    branchMap[key].cost += s.cost || 0;
   }
 
   const results = Object.values(branchMap)

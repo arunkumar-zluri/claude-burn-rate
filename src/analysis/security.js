@@ -196,17 +196,13 @@ async function getSecurityAudit() {
         // Only flag modes that bypass safety confirmations broadly.
         // acceptEdits is a convenience mode (auto-approve file edits only) — not dangerous.
         const dangerousModes = new Set(['bypassPermissions', 'fullAutoMode', 'yolo']);
-        if (session.permissionMode && dangerousModes.has(session.permissionMode)) {
-          dangerousSessions[sessionId] = {
-            mode: session.permissionMode,
-            date: session.firstTimestamp ? new Date(session.firstTimestamp).toISOString() : null,
-            projectPath: session.projectPath
-          };
-        }
+        const isDangerousSession = session.permissionMode && dangerousModes.has(session.permissionMode);
 
         // Per-session counters for anomaly detection
         let sessDestructive = 0;
         let sessWrites = 0;
+        // Collect flagged commands for dangerous sessions
+        const sessFlaggedCommands = [];
 
         for (const msg of session.assistantMessages) {
           for (const tool of msg.toolCalls) {
@@ -254,6 +250,15 @@ async function getSecurityAudit() {
                 });
                 if (category === 'destructive' || category === 'sudo') sessDestructive++;
 
+                // Track flagged commands for dangerous sessions
+                if (isDangerousSession && category !== 'safe') {
+                  sessFlaggedCommands.push({
+                    command,
+                    category,
+                    date: msg.timestamp || null
+                  });
+                }
+
                 // Feature 4: detect secrets in bash commands
                 const secrets = detectSecretsInCommand(command);
                 if (secrets.length > 0) {
@@ -267,6 +272,16 @@ async function getSecurityAudit() {
               }
             }
           }
+        }
+
+        if (isDangerousSession) {
+          dangerousSessions[sessionId] = {
+            mode: session.permissionMode,
+            date: session.firstTimestamp ? new Date(session.firstTimestamp).toISOString() : null,
+            projectPath: session.projectPath,
+            sessionFile: file,
+            flaggedCommands: sessFlaggedCommands
+          };
         }
 
         sessionStats.push({

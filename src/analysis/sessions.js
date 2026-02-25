@@ -40,6 +40,7 @@ async function buildAllSessions() {
     sessions.push({
       sessionId: entry.sessionId,
       date: entry.created ? entry.created.split('T')[0] : null,
+      createdAt: entry.created || null,
       project: entry.projectPath || null,
       summary: entry.summary || null,
       firstPrompt: entry.firstPrompt || null,

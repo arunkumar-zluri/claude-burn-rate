@@ -1,7 +1,7 @@
 const { parseStatsCache, getDateRange } = require('../data/stats-parser.js');
 const { calculateTotalCost, calculateCost, getPricing } = require('../cost/pricing.js');
 
-// Unfiltered: fast path from stats-cache.json
+// Unfiltered: fast path from stats-cache.json (supplemented with recent sessions if stale)
 // Filtered: recompute everything from session data
 function buildOverview(stats, filters, sessions) {
   if (!stats) {
@@ -16,7 +16,14 @@ function buildOverview(stats, filters, sessions) {
     return buildFromSessions(stats, sessions);
   }
 
-  return buildFromStats(stats);
+  const base = buildFromStats(stats);
+
+  // Supplement stale cache with recent sessions (no user filters, but cache is outdated)
+  if (!filters && sessions && sessions.length > 0) {
+    return supplementWithRecentSessions(base, stats, sessions);
+  }
+
+  return base;
 }
 
 function buildFromStats(stats) {
@@ -51,6 +58,137 @@ function buildFromStats(stats) {
     longestSession: parsed.longestSession,
     firstSessionDate: parsed.firstSessionDate
   };
+}
+
+function supplementWithRecentSessions(base, stats, recentSessions) {
+  const parsed = parseStatsCache(stats);
+
+  // Aggregate token usage from recent sessions
+  const recentModelUsage = {};
+  const dailyMap = {};
+  let extraMessages = 0;
+
+  for (const s of recentSessions) {
+    extraMessages += s.messages || 0;
+
+    for (const [model, tokens] of Object.entries(s.tokensByModel || {})) {
+      if (!recentModelUsage[model]) {
+        recentModelUsage[model] = { inputTokens: 0, outputTokens: 0, cacheReadInputTokens: 0, cacheCreationInputTokens: 0 };
+      }
+      recentModelUsage[model].inputTokens += tokens.inputTokens || 0;
+      recentModelUsage[model].outputTokens += tokens.outputTokens || 0;
+      recentModelUsage[model].cacheReadInputTokens += tokens.cacheReadInputTokens || 0;
+      recentModelUsage[model].cacheCreationInputTokens += tokens.cacheCreationInputTokens || 0;
+    }
+
+    if (s.date) {
+      if (!dailyMap[s.date]) {
+        dailyMap[s.date] = { date: s.date, messageCount: 0, sessionCount: 0, toolCallCount: 0, tokensByModel: {} };
+      }
+      dailyMap[s.date].messageCount += s.messages || 0;
+      dailyMap[s.date].sessionCount += 1;
+      for (const [model, tokens] of Object.entries(s.tokensByModel || {})) {
+        if (!dailyMap[s.date].tokensByModel[model]) dailyMap[s.date].tokensByModel[model] = 0;
+        dailyMap[s.date].tokensByModel[model] += (tokens.outputTokens || 0);
+      }
+    }
+  }
+
+  // Calculate cost for recent sessions
+  const recentCost = calculateTotalCost(recentModelUsage);
+
+  // Merge totals
+  base.totalCost += recentCost.totalCost;
+  base.totalMessages += extraMessages;
+  base.totalSessions += recentSessions.length;
+
+  // Merge daily activity and charts
+  const recentDaily = Object.values(dailyMap).sort((a, b) => a.date.localeCompare(b.date));
+  base.dailyActivity = [...base.dailyActivity, ...recentDaily];
+
+  const recentDailyModelTokens = recentDaily.map(d => ({ date: d.date, tokensByModel: d.tokensByModel }));
+  base.dailyCosts = [...base.dailyCosts, ...buildDailyCosts(recentDailyModelTokens)];
+  base.dailyTokens = [...base.dailyTokens, ...buildDailyTokens(recentDailyModelTokens)];
+
+  // Merge model breakdown
+  for (const [model, tokens] of Object.entries(recentModelUsage)) {
+    const existing = base.modelBreakdown.find(m => m.modelId === model);
+    const costInfo = recentCost.byModel[model] || {};
+    if (existing) {
+      existing.totalCost += costInfo.totalCost || 0;
+      existing.inputTokens += tokens.inputTokens || 0;
+      existing.outputTokens += tokens.outputTokens || 0;
+      existing.cacheReadInputTokens += tokens.cacheReadInputTokens || 0;
+      existing.cacheCreationInputTokens += tokens.cacheCreationInputTokens || 0;
+      existing.costBreakdown.input += costInfo.inputCost || 0;
+      existing.costBreakdown.output += costInfo.outputCost || 0;
+      existing.costBreakdown.cacheRead += costInfo.cacheReadCost || 0;
+      existing.costBreakdown.cacheWrite += costInfo.cacheWriteCost || 0;
+    } else {
+      base.modelBreakdown.push({
+        modelId: model,
+        displayName: costInfo.displayName || model,
+        totalCost: costInfo.totalCost || 0,
+        inputTokens: tokens.inputTokens || 0,
+        outputTokens: tokens.outputTokens || 0,
+        cacheReadInputTokens: tokens.cacheReadInputTokens || 0,
+        cacheCreationInputTokens: tokens.cacheCreationInputTokens || 0,
+        costBreakdown: {
+          input: costInfo.inputCost || 0,
+          output: costInfo.outputCost || 0,
+          cacheRead: costInfo.cacheReadCost || 0,
+          cacheWrite: costInfo.cacheWriteCost || 0
+        }
+      });
+    }
+  }
+  base.modelBreakdown.sort((a, b) => b.totalCost - a.totalCost);
+
+  // Rebuild token composition from merged model usage
+  const mergedModelUsage = { ...(parsed.modelUsage || {}) };
+  for (const [model, tokens] of Object.entries(recentModelUsage)) {
+    if (!mergedModelUsage[model]) {
+      mergedModelUsage[model] = { inputTokens: 0, outputTokens: 0, cacheReadInputTokens: 0, cacheCreationInputTokens: 0 };
+    }
+    mergedModelUsage[model].inputTokens += tokens.inputTokens;
+    mergedModelUsage[model].outputTokens += tokens.outputTokens;
+    mergedModelUsage[model].cacheReadInputTokens += tokens.cacheReadInputTokens;
+    mergedModelUsage[model].cacheCreationInputTokens += tokens.cacheCreationInputTokens;
+  }
+  base.tokenComposition = buildTokenComposition(mergedModelUsage);
+
+  // Update date range
+  const allDates = base.dailyActivity.map(d => d.date).sort();
+  if (allDates.length > 0) {
+    base.dateRange = {
+      start: allDates[0],
+      end: allDates[allDates.length - 1],
+      days: Math.ceil((new Date(allDates[allDates.length - 1]) - new Date(allDates[0])) / 86400000) + 1
+    };
+  }
+
+  // Supplement hourCounts from session creation timestamps
+  for (const s of recentSessions) {
+    if (s.createdAt) {
+      const hour = new Date(s.createdAt).getHours();
+      base.hourCounts[hour] = (base.hourCounts[hour] || 0) + (s.messages || 1);
+    }
+  }
+
+  // Recalculate averages
+  base.activeDays = base.dailyActivity.length;
+  base.avgMessagesPerDay = base.activeDays > 0 ? Math.round(base.totalMessages / base.activeDays) : 0;
+  base.avgSessionsPerDay = base.activeDays > 0 ? (base.totalSessions / base.activeDays).toFixed(1) : '0';
+  base.avgCostPerDay = base.activeDays > 0 ? base.totalCost / base.activeDays : 0;
+
+  // Update longest session if any recent session is longer
+  for (const s of recentSessions) {
+    if (s.duration && (!base.longestSession || s.duration > base.longestSession.duration)) {
+      base.longestSession = { sessionId: s.sessionId, duration: s.duration, messageCount: s.messages };
+    }
+  }
+
+  return base;
 }
 
 function buildFromSessions(stats, sessions) {

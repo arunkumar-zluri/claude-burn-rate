@@ -139,7 +139,17 @@ async function getOverview(filters) {
       return cachedOverview;
     }
     const stats = await readStatsCache();
-    cachedOverview = buildOverview(stats, null, null);
+    // Supplement stale cache with recent session data
+    let recentSessions = null;
+    if (stats && stats.lastComputedDate) {
+      const today = new Date().toISOString().split('T')[0];
+      if (stats.lastComputedDate < today) {
+        const { getSessions } = require('../analysis/sessions.js');
+        const allSessions = await getSessions();
+        recentSessions = allSessions.filter(s => s.date && s.date > stats.lastComputedDate);
+      }
+    }
+    cachedOverview = buildOverview(stats, null, recentSessions);
     cacheTime = Date.now();
     return cachedOverview;
   }

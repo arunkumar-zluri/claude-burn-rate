@@ -7,8 +7,48 @@ async function getPatterns() {
 
   const parsed = parseStatsCache(stats);
 
-  // Hour distribution
-  const hourCounts = parsed.hourCounts || {};
+  // Supplement stale cache with recent session data
+  let dailyActivity = parsed.dailyActivity || [];
+  let dailyModelTokens = parsed.dailyModelTokens || [];
+  let hourCounts = { ...(parsed.hourCounts || {}) };
+
+  if (stats.lastComputedDate) {
+    const today = new Date().toISOString().split('T')[0];
+    if (stats.lastComputedDate < today) {
+      const { getSessions } = require('./sessions.js');
+      const allSessions = await getSessions();
+      const recentSessions = allSessions.filter(s => s.date && s.date > stats.lastComputedDate);
+
+      if (recentSessions.length > 0) {
+        // Supplement daily activity
+        const dailyMap = {};
+        for (const s of recentSessions) {
+          if (!s.date) continue;
+          if (!dailyMap[s.date]) {
+            dailyMap[s.date] = { date: s.date, messageCount: 0, sessionCount: 0, toolCallCount: 0, tokensByModel: {} };
+          }
+          dailyMap[s.date].messageCount += s.messages || 0;
+          dailyMap[s.date].sessionCount += 1;
+          for (const [model, tokens] of Object.entries(s.tokensByModel || {})) {
+            if (!dailyMap[s.date].tokensByModel[model]) dailyMap[s.date].tokensByModel[model] = 0;
+            dailyMap[s.date].tokensByModel[model] += (tokens.outputTokens || 0);
+          }
+        }
+
+        const recentDaily = Object.values(dailyMap).sort((a, b) => a.date.localeCompare(b.date));
+        dailyActivity = [...dailyActivity, ...recentDaily];
+        dailyModelTokens = [...dailyModelTokens, ...recentDaily.map(d => ({ date: d.date, tokensByModel: d.tokensByModel }))];
+
+        // Supplement hour counts from session creation timestamps
+        for (const s of recentSessions) {
+          if (s.createdAt) {
+            const hour = new Date(s.createdAt).getHours();
+            hourCounts[hour] = (hourCounts[hour] || 0) + (s.messages || 1);
+          }
+        }
+      }
+    }
+  }
 
   // Peak / quiet hours
   const hourEntries = Object.entries(hourCounts).map(([h, c]) => [parseInt(h), c]);
@@ -17,13 +57,13 @@ async function getPatterns() {
   const quietHour = hourEntries.length > 0 ? hourEntries[hourEntries.length - 1][0] : null;
 
   // Weekly comparison
-  const weeklyComparison = buildWeeklyComparison(parsed.dailyActivity);
+  const weeklyComparison = buildWeeklyComparison(dailyActivity);
 
   // Day of week distribution
-  const dayOfWeekCounts = buildDayOfWeekCounts(parsed.dailyActivity);
+  const dayOfWeekCounts = buildDayOfWeekCounts(dailyActivity);
 
   // Model trends over time
-  const modelTrends = buildModelTrends(parsed.dailyModelTokens);
+  const modelTrends = buildModelTrends(dailyModelTokens);
 
   return {
     hourCounts,
