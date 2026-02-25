@@ -170,4 +170,4 @@ Your data never leaves your machine. You can verify this — the package has a s
 
 ## License
 
-MIT
+[MIT](https://github.com/arunkumar-zluri/claude-burn-rate/blob/main/LICENSE)
