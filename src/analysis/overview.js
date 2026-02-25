@@ -6,7 +6,7 @@ const { calculateTotalCost, calculateCost, getPricing } = require('../cost/prici
 function buildOverview(stats, filters, sessions) {
   if (!stats) {
     return {
-      error: 'No stats-cache.json found. Run Claude Code to generate usage data.',
+      error: 'No Claude Code data found.\n\nThis tool analyzes your Claude Code usage — install Claude Code (https://docs.anthropic.com/en/docs/claude-code) and start a conversation to see your analytics here.',
       empty: true
     };
   }

@@ -1294,6 +1294,17 @@ function fmtDuration(ms) {
   return hrs + 'h ' + (mins % 60) + 'm';
 }
 
+function noDataHtml() {
+  return `<div style="text-align:center;padding:60px 20px;max-width:480px;margin:0 auto">
+    <div style="font-size:48px;margin-bottom:16px">&#x1F50D;</div>
+    <h3 style="margin:0 0 8px;font-size:18px;color:var(--text)">No Claude Code data found</h3>
+    <p style="margin:0;font-size:14px;color:var(--text-dim);line-height:1.6">
+      This tool analyzes your Claude Code usage.<br>
+      Install <a href="https://docs.anthropic.com/en/docs/claude-code" target="_blank" style="color:#a78bfa">Claude Code</a> and start a conversation to see your analytics here.
+    </p>
+  </div>`;
+}
+
 // Chart defaults
 Chart.defaults.color = '#9ca3af';
 Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
@@ -1316,7 +1327,7 @@ async function loadOverview() {
     const data = await api('overview');
     state.overview = data;
     if (data.error && data.empty) {
-      document.getElementById('overview-loading').innerHTML = '<div>' + data.error + '</div>';
+      document.getElementById('overview-loading').innerHTML = noDataHtml();
       return;
     }
     renderOverview(data);
@@ -1668,6 +1679,10 @@ async function loadUsage() {
     const [sessions, projects, patterns] = await Promise.all([
       api('sessions'), api('projects'), api('patterns')
     ]);
+    if ((!sessions || sessions.length === 0) && (!projects || projects.length === 0)) {
+      document.getElementById('usage-loading').innerHTML = noDataHtml();
+      return;
+    }
     state.usage = true;
     document.getElementById('usage-loading').style.display = 'none';
     document.getElementById('usage-content').style.display = 'block';
@@ -1959,6 +1974,10 @@ async function loadInsights() {
     const [data, gamification, expensive, contributions] = await Promise.all([
       api('insights'), api('gamification'), api('expensive-prompts'), api('contributions')
     ]);
+    if (!gamification && (!data || data.length === 0)) {
+      document.getElementById('insights-loading').innerHTML = noDataHtml();
+      return;
+    }
     state.insights = data;
     document.getElementById('insights-loading').style.display = 'none';
     document.getElementById('insights-content').style.display = 'block';
@@ -2033,6 +2052,10 @@ function renderContributions(data) {
 async function loadSecurity() {
   try {
     const data = await api('security');
+    if (data.noData) {
+      document.getElementById('security-loading').innerHTML = noDataHtml();
+      return;
+    }
     state.security = data;
     renderSecurity(data);
   } catch (err) { document.getElementById('security-loading').innerHTML = '<div>Error: ' + err.message + '</div>'; }

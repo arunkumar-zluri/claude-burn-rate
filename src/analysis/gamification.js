@@ -4,6 +4,8 @@
  */
 
 function getGamification(overview, sessions) {
+  if (!overview || overview.empty) return null;
+
   const score = computeScore(overview, sessions);
   const achievements = computeAchievements(overview, sessions);
   const streak = computeStreak(overview, sessions);

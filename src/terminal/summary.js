@@ -19,7 +19,10 @@ async function printSummary() {
   const overview = buildOverview(stats, null, recentSessions && recentSessions.length > 0 ? recentSessions : null);
 
   if (overview.empty) {
-    console.log(overview.error);
+    console.log('\nNo Claude Code data found.\n');
+    console.log('This tool analyzes your Claude Code usage.');
+    console.log('Install Claude Code and start a conversation to see your analytics.\n');
+    console.log('  https://docs.anthropic.com/en/docs/claude-code\n');
     return;
   }
 

@@ -7,7 +7,10 @@ async function exportData(format) {
   const overview = buildOverview(stats);
 
   if (overview.empty) {
-    console.error(overview.error);
+    console.error('\nNo Claude Code data found.\n');
+    console.error('This tool analyzes your Claude Code usage.');
+    console.error('Install Claude Code and start a conversation to see your analytics.\n');
+    console.error('  https://docs.anthropic.com/en/docs/claude-code\n');
     process.exit(1);
   }
 

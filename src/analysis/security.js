@@ -155,6 +155,10 @@ function extractFilePaths(toolCall) {
 async function getSecurityAudit() {
   const projectDirs = await listProjectDirs();
 
+  if (projectDirs.length === 0) {
+    return { noData: true };
+  }
+
   // Track file access: path -> { reads, writes, edits }
   const fileAccessMap = {};
   // Track bash commands
